@@ -21,6 +21,9 @@
 - **PC control:** "open Chrome / YouTube / my Downloads / bluetooth settings", "volume up", "mute", "next song",
   "close Discord", "minimise Word", "switch to WhatsApp", "search Google for ...", "type "hello"", "lock my PC",
   "put my PC to sleep", "restart / shut down my PC" (asks first, 30 s countdown; "cancel the shutdown").
+- **Buttons and menus inside apps:** "in Calculator click Seven", "in Notepad open File > Save as",
+  "what buttons are in this window?", "turn on dark mode in Settings". Anything like delete / send / pay /
+  uninstall / sign out always asks you first; she never types passwords or clicks in security windows.
 - **Free cloud brains:** Command Center > Settings > "Get a free key" next to Groq and Gemini. Sign up yourself,
   copy the key, paste it in the field, Save. From then on she uses the cloud brain (smarter, very fast) and falls
   back to the local one automatically. Free tiers have daily limits and may use what you send to improve their

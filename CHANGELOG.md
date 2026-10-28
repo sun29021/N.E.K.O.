@@ -3,6 +3,19 @@
 All notable changes. Versions follow semantic versioning; database schema and
 config versions are tracked separately (see docs/DATABASE_SCHEMA.md).
 
+## [0.7.2] - 2026-10-28 - control buttons and menus inside apps
+
+### Added
+- `app_control` tool (`src/neko/automation`, optional `pywinauto`): Neko can list what's in an app window,
+  click buttons / tabs / checkboxes by name, walk menus ("File > Save as"), read a value and fill a field.
+  Each click is verified by checking that the app visibly reacted. Tested live: Calculator 7 + 2 = 9.
+
+### Safety
+- Clicks on anything destructive or outward-facing (delete, send, pay, buy, uninstall, sign out, submit...)
+  are Level 3 and ask every time; filling a field asks first; password fields are never filled or read.
+- Never acts on Neko's own windows (her approval dialog), Windows Security / UAC, credential or sign-in
+  windows.
+
 ## [0.7.1] - 2026-10-28 - start with Windows, office GPU from the laptop, one-click updates
 
 ### Added

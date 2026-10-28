@@ -62,7 +62,7 @@ _TOOL_HINT_RE = re.compile(
     r"scripts?|ram|memory usage|vram|gpu|cpu|disk|storage|battery|system status|temperature|models? installed|"
     r"installed models?|which models?|search|google|look up|internet|online|web|website|news|latest|today|"
     r"current|weather|price|who is|who was|when is|when did|how much does|open|launch|close|minimi[sz]e|volume|"
-    r"window|type|lock|restart|shut ?down|mute)\b|https?://",
+    r"window|type|lock|restart|shut ?down|mute|click|press|button|menu|tab|tick|checkbox|toggle|select)\b|https?://",
     re.IGNORECASE,
 )
 

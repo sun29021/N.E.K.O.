@@ -199,6 +199,14 @@ with your keys (RAM question via tool 1.2 s; your exact Hisab sentence summarise
 | One-click updates | local end-to-end simulation (update applied; broken update rolled back). Needs your private GitHub repo to go live. |
 **234/234 tests pass.**
 
+## 6o. 0.7.2 - buttons and menus inside apps
+- `app_control` (pywinauto UI Automation): list / click / menu / read / fill inside any app window. Dangerous
+  click words are Level 3, fill is Level 2, password fields refused, own/security/UAC windows refused.
+- Verified 2026-10-28: 239 tests OK (new `tests/unit/test_app_control.py`); live Calculator run clicked
+  Clear, Seven, Plus, Two, Equals (each verified "the app reacted") and read "Display is 9".
+- Limits: apps that don't expose UI Automation (some games, custom-drawn apps) show few or no names; then
+  Neko can only use keyboard typing or open/close the window.
+
 ## 7. PC crashes on 2026-10-27 (investigated read-only)
 | Time | Bug check | Meaning |
 |---|---|---|

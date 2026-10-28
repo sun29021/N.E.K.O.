@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "neko-assistant"
-version = "0.7.1"
+version = "0.7.2"
 description = "N.E.K.O. (Neuro Electric Knowledge Operator): a local-first, privacy-conscious AI companion and Windows command center."
 readme = "README.md"
 license = { text = "MIT" }
@@ -34,6 +34,8 @@ docs = ["pypdf>=5,<7"]
 media = ["yt-dlp>=2026.10"]
 # Natural online voices (Microsoft neural voices: English + native Bangla, female/male).
 voice-online = ["edge-tts>=7.3,<8"]
+# Buttons, menus and fields inside apps (Windows UI Automation).
+automation = ["pywinauto>=0.6.9,<0.7"]
 # Speech recognition on an NVIDIA GPU (CUDA 12 libraries for faster-whisper, ~2 GB).
 gpu-voice = ["nvidia-cublas-cu12==12.9.2.10", "nvidia-cudnn-cu12>=9.5,<10"]
 dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.10"]

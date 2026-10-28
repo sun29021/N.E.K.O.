@@ -136,6 +136,9 @@ def build(settings: Settings | None = None, *, db_path: str | None = None, conso
     from ..tools.pc import register_pc_tools
 
     register_pc_tools(registry)  # open apps/sites/files, volume, windows, power (risky ones ask first)
+    from ..automation import register_automation_tools
+
+    register_automation_tools(registry)  # buttons/menus/fields inside apps (pywinauto, optional)
     from ..media import register_media_tools
 
     register_media_tools(registry)  # "play <song>" from YouTube in the background (player = desktop app)
