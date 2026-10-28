@@ -40,6 +40,7 @@ class UiBridge(QObject):
     visual = Signal(object)                # side-panel content (title, markdown, image bytes, source)
     emotion = Signal(str)                  # her mood for the reply being written
     settings_changed = Signal(dict)        # e.g. voice gender / language switched by voice command
+    reminder = Signal(dict)                # a reminder is due (routines/)
 
     def __init__(self, neko: Neko) -> None:
         super().__init__()
@@ -51,15 +52,17 @@ class UiBridge(QObject):
         self._queue: deque[tuple[str, list[bytes] | None, str | None]] = deque()
         self._seq = 0
         bus = neko.bus
-        bus.subscribe(ev.STATE, lambda e: self.state.emit(e.payload["state"], e.payload.get("detail", "")))
-        bus.subscribe(ev.TOKEN, lambda e: self.token.emit(e.payload["text"]))
+        # Requests from your phone run quietly: the PC's orb doesn't show, stream or speak them.
+        bus.subscribe(ev.STATE, lambda e: e.origin or self.state.emit(e.payload["state"], e.payload.get("detail", "")))
+        bus.subscribe(ev.TOKEN, lambda e: e.origin or self.token.emit(e.payload["text"]))
         bus.subscribe(ev.ROUTING, lambda e: self.routing.emit(dict(e.payload)))
         bus.subscribe(ev.RESOURCES, lambda e: self.resources.emit(dict(e.payload)))
         bus.subscribe(ev.TOOL_CALL, lambda e: self.tool.emit(dict(e.payload)))
         bus.subscribe(ev.TASK, lambda e: self.task.emit(dict(e.payload)))
-        bus.subscribe(ev.VISUAL, lambda e: self.visual.emit(dict(e.payload)))
+        bus.subscribe(ev.VISUAL, lambda e: e.origin or self.visual.emit(dict(e.payload)))
         bus.subscribe(ev.SETTINGS, lambda e: self.settings_changed.emit(dict(e.payload)))
-        bus.subscribe(ev.EMOTION, lambda e: self.emotion.emit(str(e.payload.get("emotion", "neutral"))))
+        bus.subscribe(ev.REMINDER, lambda e: self.reminder.emit(dict(e.payload)))
+        bus.subscribe(ev.EMOTION, lambda e: e.origin or self.emotion.emit(str(e.payload.get("emotion", "neutral"))))
         neko.policy.set_approval_handler(self._on_approval_needed)
         self._shot: bytes | None = None
         self._shot_ready = threading.Event()

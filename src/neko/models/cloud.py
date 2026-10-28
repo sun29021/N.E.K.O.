@@ -84,7 +84,7 @@ def save_keys(data_dir: Path, keys: dict[str, str]) -> Path:
         if v.strip():
             current[k] = v.strip()
     lines = ["# N.E.K.O. cloud keys - private. Never share this file.", "[cloud]"]
-    lines += [f'{k} = "{v}"' for k, v in current.items() if re.fullmatch(r"[\w\-.]+", v)]
+    lines += [f'{k} = "{v}"' for k, v in current.items() if re.fullmatch(r"[\w\-.:]+", v)]  # (":" - Telegram bot keys)
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return p

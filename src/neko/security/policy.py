@@ -58,8 +58,14 @@ class ApprovalRequest:
     _approved: bool = field(default=False, repr=False)
 
     def resolve(self, approved: bool) -> None:
+        if self._event.is_set():
+            return  # first answer wins (PC dialog or phone)
         self._approved = approved
         self._event.set()
+
+    @property
+    def decided(self) -> bool:
+        return self._event.is_set()
 
     def wait(self, token: CancelToken, timeout_s: float = 300) -> bool:
         deadline = time.monotonic() + timeout_s

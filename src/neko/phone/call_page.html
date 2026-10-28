@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#05060a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="referrer" content="no-referrer">
+<link rel="manifest" href="/manifest.json">
+<title>Neko</title>
+<style>
+  :root { --bg:#05060a; --fg:#e8f4ff; --dim:#7d8aa3; --cyan:#3ef0ff; --pink:#ff4fd8; --red:#ff4d6a; --ok:#4dffa6; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--fg);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  body { display:flex; flex-direction:column; align-items:center; justify-content:space-between;
+    padding:max(24px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom)); overflow:hidden; }
+  header { text-align:center; }
+  h1 { margin:0; font-size:15px; letter-spacing:.4em; color:var(--cyan); font-weight:600; }
+  #status { margin-top:8px; color:var(--dim); font-size:14px; min-height:20px; }
+  #orb { width:min(62vw,260px); aspect-ratio:1; border-radius:50%; position:relative;
+    background:radial-gradient(circle at 50% 45%, #9ffcff 0%, var(--cyan) 18%, #0a6c88 45%, #071321 70%, transparent 72%);
+    box-shadow:0 0 60px #3ef0ff55, inset 0 0 40px #000a; transition:filter .3s, transform .08s; }
+  #orb.speaking { background:radial-gradient(circle at 50% 45%, #ffd2f6 0%, var(--pink) 20%, #7a1a6c 48%, #160717 70%, transparent 72%);
+    box-shadow:0 0 70px #ff4fd855, inset 0 0 40px #000a; }
+  #orb.idle { filter:grayscale(.85) brightness(.55); }
+  #subs { min-height:90px; max-width:640px; text-align:center; font-size:21px; line-height:1.4; padding:0 4px; }
+  #subs .heard { color:var(--dim); font-size:16px; display:block; margin-bottom:8px; }
+  #subs .w { opacity:.25; transition:opacity .12s; } #subs .w.on { opacity:1; }
+  #controls { display:flex; gap:18px; align-items:center; }
+  button { border:0; border-radius:999px; font-size:16px; font-weight:600; color:#001018; cursor:pointer; }
+  #call { width:76px; height:76px; background:var(--ok); }
+  #call.on { background:var(--red); color:#fff; }
+  #mute { width:56px; height:56px; background:#1a2030; color:var(--fg); }
+  #mute.on { background:#ffd34d; color:#000; }
+  form { width:100%; max-width:640px; display:flex; gap:8px; margin-top:14px; }
+  input { flex:1; min-width:0; background:#0d1220; color:var(--fg); border:1px solid #1e2a40; border-radius:12px;
+    padding:12px; font-size:16px; }
+  form button { padding:0 16px; background:var(--cyan); border-radius:12px; }
+  #nokey { display:none; text-align:center; color:var(--dim); max-width:420px; }
+</style>
+</head>
+<body>
+<header><h1>N.E.K.O.</h1><div id="status">Tap the green button to call</div></header>
+<div id="orb" class="idle" aria-hidden="true"></div>
+<div id="subs" aria-live="polite"></div>
+<div id="nokey">Open this page from the link Neko sent you in Telegram (/call).</div>
+<div style="width:100%;display:flex;flex-direction:column;align-items:center">
+  <div id="controls">
+    <button id="mute" title="Mute microphone" aria-label="Mute microphone">Mute</button>
+    <button id="call" aria-label="Start call">Call</button>
+  </div>
+  <form id="typed"><input id="text" placeholder="...or type to her" autocomplete="off"><button>Send</button></form>
+</div>
+<script>
+(() => {
+  "use strict";
+  // ---- the private key: from the #fragment of the link (never sent to any server log), kept on this phone
+  let key = "";
+  try {
+    const m = location.hash.match(/k=([A-Za-z0-9_\-]+)/);
+    if (m) { localStorage.setItem("neko-key", m[1]); history.replaceState(null, "", location.pathname); }
+    key = localStorage.getItem("neko-key") || "";
+  } catch (e) { const m = location.hash.match(/k=([A-Za-z0-9_\-]+)/); key = m ? m[1] : ""; }
+  const $ = id => document.getElementById(id);
+  const statusEl = $("status"), orb = $("orb"), subs = $("subs"), callBtn = $("call"), muteBtn = $("mute");
+  if (!key) { $("nokey").style.display = "block"; callBtn.disabled = true; }
+
+  const player = new Audio(); player.playsInline = true;
+  let inCall = false, muted = false, stream = null, ctx = null, analyser = null, buf = null;
+  let recorder = null, chunks = [], recording = false, speechMs = 0, silenceMs = 0, loudMs = 0;
+  let noise = 0.01, lastT = 0, busy = false, queue = [], speaking = false, wordsTimer = 0, controller = null;
+
+  const setStatus = t => { statusEl.textContent = t; };
+  const api = (path, body, type) => fetch(path, { method: "POST", body,
+    headers: { "X-Neko-Key": key, "Content-Type": type || "application/octet-stream" } });
+
+  // ---- her voice: sentences arrive while she is still thinking; play them in order with subtitles
+  function playNext() {
+    if (speaking || !queue.length) { if (!speaking && !busy && inCall) setStatus("Listening..."); return; }
+    const item = queue.shift();
+    showWords(item.text, item.words || []);
+    if (!item.audio) { setTimeout(playNext, 50); return; }
+    speaking = true; orb.classList.add("speaking"); setStatus("Neko is talking - just talk to interrupt");
+    player.src = "data:" + item.mime + ";base64," + item.audio;
+    player.onended = player.onerror = () => { speaking = false; orb.classList.remove("speaking"); playNext(); };
+    player.play().catch(() => { speaking = false; playNext(); });
+  }
+  function showWords(text, words) {
+    clearInterval(wordsTimer);
+    const parts = words.length ? words.map(w => w[0]) : text.split(/\s+/);
+    subs.innerHTML = parts.map(w => `<span class="w">${w.replace(/[<>&]/g, "")}</span>`).join(" ");
+    const spans = subs.querySelectorAll(".w");
+    if (!words.length) { spans.forEach(s => s.classList.add("on")); return; }
+    wordsTimer = setInterval(() => {
+      const t = player.currentTime;
+      words.forEach((w, i) => { if (t + 0.05 >= w[1]) spans[i].classList.add("on"); });
+    }, 60);
+  }
+  function hush() {
+    queue = []; clearInterval(wordsTimer); player.pause(); speaking = false; orb.classList.remove("speaking");
+    if (controller) controller.abort();
+    api("/api/stop", "").catch(() => {});
+  }
+
+  // ---- one turn: send what you said, read her streamed answer
+  async function send(body, type, path) {
+    busy = true; setStatus("Thinking...");
+    controller = new AbortController();
+    try {
+      const r = await fetch(path, { method: "POST", body, signal: controller.signal,
+        headers: { "X-Neko-Key": key, "Content-Type": type } });
+      if (r.status === 403) { setStatus("This link isn't valid any more - ask Neko for /call again."); return; }
+      const reader = r.body.getReader(), dec = new TextDecoder();
+      let pending = "";
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        pending += dec.decode(value, { stream: true });
+        let cut;
+        while ((cut = pending.indexOf("\n\n")) >= 0) {
+          const line = pending.slice(0, cut); pending = pending.slice(cut + 2);
+          if (!line.startsWith("data: ")) continue;
+          const ev = JSON.parse(line.slice(6));
+          if (ev.type === "heard") subs.innerHTML = `<span class="heard">"${ev.text.replace(/[<>&]/g, "")}"</span>`;
+          else if (ev.type === "say") { queue.push(ev); playNext(); }
+          else if (ev.type === "status") setStatus(ev.text);
+          else if (ev.type === "error") { setStatus(ev.text); }
+          else if (ev.type === "nothing") setStatus("Listening...");
+        }
+      }
+    } catch (e) { if (e.name !== "AbortError") setStatus("Connection problem - is the PC on?"); }
+    finally { busy = false; controller = null; if (!speaking && !queue.length && inCall) setStatus("Listening..."); }
+  }
+
+  // ---- microphone + voice activity: start recording when you talk, send when you pause
+  function startRecording() {
+    chunks = []; recording = true; silenceMs = 0;
+    const type = ["audio/webm;codecs=opus", "audio/mp4", "audio/ogg;codecs=opus"].find(t =>
+      window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || "";
+    recorder = new MediaRecorder(stream, type ? { mimeType: type } : undefined);
+    recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    recorder.onstop = () => {
+      const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+      if (speechMs > 350 && blob.size > 1500) send(blob, blob.type, "/api/turn");
+      speechMs = 0;
+    };
+    recorder.start(250);
+    setStatus("Hearing you...");
+  }
+  function tick(t) {
+    if (!inCall) return;
+    const dt = lastT ? Math.min(100, t - lastT) : 16; lastT = t;
+    analyser.getFloatTimeDomainData(buf);
+    let sum = 0; for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+    const rms = Math.sqrt(sum / buf.length);
+    if (!recording && !speaking) noise = noise * 0.995 + rms * 0.005;   // learn the room's background noise
+    const thr = Math.max(0.012, noise * 3);
+    orb.style.transform = `scale(${1 + Math.min(0.12, rms * (speaking ? 0.6 : 2.5))})`;
+    if (muted) { requestAnimationFrame(tick); return; }
+    const loud = rms > (speaking ? thr * 2.2 : thr);   // her own voice leaks a little: harder to trigger
+    if (speaking && loud) { loudMs += dt; if (loudMs > 260) { loudMs = 0; hush(); startRecording(); } }
+    else if (!recording && loud) { loudMs += dt; if (loudMs > 90) { loudMs = 0; startRecording(); } }
+    else if (!loud) loudMs = 0;
+    if (recording) {
+      if (loud) { speechMs += dt; silenceMs = 0; } else silenceMs += dt;
+      if (silenceMs > 750 || speechMs > 30000) { recording = false; recorder.stop(); setStatus("Thinking..."); }
+    }
+    requestAnimationFrame(tick);
+  }
+  async function startCall() {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: {
+        echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    } catch (e) { setStatus("I need the microphone - allow it in the browser and try again."); return; }
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = ctx.createMediaStreamSource(stream);
+    analyser = ctx.createAnalyser(); analyser.fftSize = 1024; buf = new Float32Array(analyser.fftSize);
+    src.connect(analyser);
+    player.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=";
+    player.play().catch(() => {});        // unlocks audio playback on iPhone (needs this tap)
+    inCall = true; callBtn.classList.add("on"); callBtn.textContent = "End"; orb.classList.remove("idle");
+    setStatus("Listening... say hi");
+    try { if (navigator.wakeLock) await navigator.wakeLock.request("screen"); } catch (e) {}
+    requestAnimationFrame(tick);
+  }
+  function endCall() {
+    inCall = false; hush(); if (recorder && recording) { recording = false; recorder.stop(); }
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    if (ctx) ctx.close();
+    callBtn.classList.remove("on"); callBtn.textContent = "Call"; orb.classList.add("idle");
+    setStatus("Call ended"); orb.style.transform = "";
+  }
+  callBtn.onclick = () => (inCall ? endCall() : startCall());
+  muteBtn.onclick = () => { muted = !muted; muteBtn.classList.toggle("on", muted);
+    muteBtn.textContent = muted ? "Muted" : "Mute"; };
+  $("typed").onsubmit = e => {
+    e.preventDefault();
+    const t = $("text").value.trim(); if (!t || !key) return;
+    $("text").value = ""; hush();
+    player.play().catch(() => {});
+    subs.innerHTML = `<span class="heard">"${t.replace(/[<>&]/g, "")}"</span>`;
+    send(JSON.stringify({ text: t }), "application/json", "/api/text");
+  };
+  if (key) api("/api/ping", "").then(r => { if (r.status === 403) setStatus("This link isn't valid - ask Neko for /call again."); })
+    .catch(() => setStatus("Can't reach Neko - is the PC on and Tailscale connected on this phone?"));
+})();
+</script>
+</body>
+</html>

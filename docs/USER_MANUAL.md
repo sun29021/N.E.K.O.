@@ -8,6 +8,16 @@
 - **She vanished?** After 4 quiet minutes the orb fades away, but she is still listening. Say "Neko"
   (or a request) and she reappears. Change the delay with `ui.idle_hide_seconds` (0 = never hide).
 
+## 000. New in 0.8 - Neko on your phone
+- **Telegram chat** (text, voice notes, photos, files) and **live calls** from your phone - set up in
+  Command Center > Phone, step by step in docs/PHONE.md. Risky actions ask you on the phone.
+- **Reminders**: "remind me at 6 to call Ammu", "remind me in 20 minutes to check the rice",
+  "what are my reminders?", "cancel my reminders". She says it on the PC and messages your phone.
+- **Learned skills**: let her do a few steps ("open Excel", "click Blank workbook"...), then say
+  **"save that as monthly sheet"**. Next time: **"do the monthly sheet"**. "What skills do you know?",
+  "forget the skill monthly sheet". Each step still asks for approval when it needs it.
+- From the phone: "send me my screen", "is my laptop on?", "lock my PC", "play music on the PC".
+
 ## 00. New in 0.7
 - **Natural voice** with subtitles that appear word by word as she speaks.
 - **"Use a male voice" / "switch to female voice"**, **"speak Bangla"** (native Bangla voice) / **"speak English"**.

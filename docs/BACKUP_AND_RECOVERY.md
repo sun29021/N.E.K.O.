@@ -92,3 +92,9 @@ contains your memories and conversations. Credentials are never stored in N.E.K.
 Migration `0002_conversation_compaction.sql` adds `conversations.summary_upto` and the `messages_fts` search
 index (rebuilt from existing messages). Before applying it N.E.K.O. writes a verified backup
 (`backups\neko-...-pre-migration-v1.db`). To go back: quit N.E.K.O., restore that backup (section 5) and run 0.5.4.
+
+## 14. Schema 3 + phone (0.8.0, 2026-10-28)
+Migration `0003_reminders_skills.sql` adds the `reminders` and `skills` tables (new, empty - nothing
+existing changes). A verified backup (`pre-migration-v2`) is written first; to go back, restore it and run
+0.7.2. New config section `[phone]` (all off by default) and a new file `%LOCALAPPDATA%\NEKO\phone.json`
+(paired chat, hashed PIN, call key) - include it in backups; delete it to unpair everything.

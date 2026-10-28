@@ -3,6 +3,31 @@
 All notable changes. Versions follow semantic versioning; database schema and
 config versions are tracked separately (see docs/DATABASE_SCHEMA.md).
 
+## [0.8.0] - 2026-10-28 - Neko on your phone, reminders, learned skills
+
+### Added
+- **Telegram chat** (`src/neko/phone`): text, voice notes (Whisper in, natural voice note out), photos,
+  files (saved to your writable folder "From phone"), "send me my screen", `/status`, `/call`. Standard
+  library only, outgoing connections only. Pairing with a one-time 6-digit code; only the paired private
+  chat is ever answered.
+- **Phone approvals**: Approve / Deny buttons for requests made from the phone; Level 3 also needs an approval
+  PIN (PBKDF2, deleted from the chat, 5 failures lock it for an hour). First answer (PC or phone) wins.
+- **Live calls** (`phone/call.py` + `call_page.html`): a call page on 127.0.0.1 shared inside your tailnet
+  by `scripts/phone-call.ps1` (tailscale serve https 8443; existing shares untouched). Hands-free voice
+  activity detection, streamed sentence-by-sentence answers with word subtitles, talk over her to interrupt.
+- **Reminders** (`routines/`): "remind me at 6 / in 20 minutes / tomorrow at 9 to ...", list, cancel;
+  spoken on the PC and sent to the phone; missed ones are delivered late with a note.
+- **Learned skills**: "save that as <name>" stores the actions she just did; "do the <name>" replays them,
+  each step through the permission policy again. She offers it after multi-step jobs.
+- **Alerts** to the phone: long PC jobs finished, low battery.
+- Command Center > **Phone** tab; `[phone]` config section (all off by default); docs/PHONE.md.
+
+### Changed
+- Engine events carry their origin (`core/origin.py`): phone conversations don't appear or speak on the PC,
+  and never trigger the automatic screen look.
+- Coordinator add-on hooks (`extensions`, `after_reply`) for reminders, skills and phone commands.
+- Schema 3: `reminders` and `skills` tables (migration 0003, backup first).
+
 ## [0.7.2] - 2026-10-28 - control buttons and menus inside apps
 
 ### Added

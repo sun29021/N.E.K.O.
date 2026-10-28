@@ -120,6 +120,17 @@ notepad = "%SystemRoot%\\System32\\notepad.exe"
 calculator = "%SystemRoot%\\System32\\calc.exe"
 explorer = "%SystemRoot%\\explorer.exe"
 
+[phone]
+# Chat with her from Telegram: create a bot with @BotFather, paste its key in Command Center > Phone, pair.
+telegram = false
+# Live call page on your phone, only through Tailscale (Command Center > Phone > Turn on calls).
+calls = false
+call_port = 8791           # local only; never listens on the network itself
+call_https_port = 8443     # the https port Tailscale serves it on inside your tailnet
+voice_replies = "auto"     # auto | always | never
+notify_long_jobs = true
+notify_battery = true
+
 [remote]
 enabled = false
 # [[remote.endpoints]]

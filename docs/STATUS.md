@@ -207,6 +207,19 @@ with your keys (RAM question via tool 1.2 s; your exact Hisab sentence summarise
 - Limits: apps that don't expose UI Automation (some games, custom-drawn apps) show few or no names; then
   Neko can only use keyboard typing or open/close the window.
 
+## 6p. 0.8.0 - phone (Telegram + live calls), reminders, learned skills
+- Telegram link, pairing, phone approvals + PIN, voice notes, photos/files, screen to phone, alerts: unit-tested
+  with a fake Telegram API (`tests/unit/test_phone.py`: owner-only, expired codes, group chats ignored, PIN
+  lockout, first answer wins, forwarded text kept as fenced context, bot key scrubbed from errors).
+- Call page: tested over loopback (page served, wrong key 403, typed turn streams `say`/`done` events,
+  bound to 127.0.0.1). Voice-note OGG/Opus encode + decode round trip tested with PyAV. Layout checked at
+  375 px phone width.
+- Reminders + skills: `tests/unit/test_routines.py` (time parsing, fire once, cancel, save/replay,
+  replay re-asks approval).
+- Verified 2026-10-28: 262 tests OK, 3 full runs in a row (fixed: skill steps logged in the same instant could
+  replay out of order - now sorted by insertion too). Not yet verified for real: a live Telegram bot (needs the owner's bot key),
+  a call from the phone through Tailscale, and Ray-Ban glasses as the headset.
+
 ## 7. PC crashes on 2026-10-27 (investigated read-only)
 | Time | Bug check | Meaning |
 |---|---|---|

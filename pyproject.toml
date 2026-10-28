@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "neko-assistant"
-version = "0.7.2"
+version = "0.8.0"
 description = "N.E.K.O. (Neuro Electric Knowledge Operator): a local-first, privacy-conscious AI companion and Windows command center."
 readme = "README.md"
 license = { text = "MIT" }
@@ -47,7 +47,7 @@ neko = "neko.__main__:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-neko = ["database/migrations/*.sql", "configuration/defaults.toml"]
+neko = ["database/migrations/*.sql", "configuration/defaults.toml", "phone/call_page.html"]
 
 [tool.ruff]
 line-length = 100

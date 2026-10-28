@@ -37,6 +37,13 @@ tick. It is a normal modal window, not always-on-top, so it can't hide UAC, the 
 security prompts. UAC runs on the secure desktop anyway. Unanswered requests expire after about
 280–300 s and count as denied. Gestures and voice can never approve.
 
+**From the phone (0.8):** for requests you sent from your paired phone, the same question also goes to the
+phone as Approve / Deny buttons (`phone/service.py`); the first answer - PC or phone - wins
+(`ApprovalRequest.resolve` ignores later answers). Level 3 from the phone additionally needs the approval
+PIN (PBKDF2-hashed, message deleted, 5 failures lock it for an hour). Typed text and voice notes never
+approve. Requests from the PC are never sent to the phone. Learned skills replay every step through the
+policy again, so a skill can never skip an approval.
+
 ## 5. Prompt-injection defence
 - Untrusted content is wrapped in `BEGIN UNTRUSTED <random tag> … END UNTRUSTED <tag>`. Look-alike
   markers inside the content are neutralised, and the system prompt tells the model it is data.
@@ -94,3 +101,5 @@ shortcut, **not a global hotkey**. If N.E.K.O. is frozen, close it from Task Man
 Delete files · request admin rights · change Windows settings, registry, firewall or startup entries ·
 send messages/emails · buy anything · enter passwords · open network listeners · install
 packages or models by itself.
+(0.8 exception, only after you click "Turn on calls": the call page listens on **127.0.0.1** and Tailscale
+shares it inside your own tailnet - see docs/PHONE.md. Telegram uses outgoing connections only.)

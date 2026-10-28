@@ -10,8 +10,8 @@ from neko.database.db import Database, _split_sql
 class DatabaseTests(unittest.TestCase):
     def test_migrate_in_memory(self):
         db = Database(":memory:")
-        self.assertEqual(db.migrate(), [1, 2])  # 0002: conversation compaction + message search
-        self.assertEqual(db.schema_version(), 2)
+        self.assertEqual(db.migrate(), [1, 2, 3])  # 0002: compaction + search; 0003: reminders + skills
+        self.assertEqual(db.schema_version(), 3)
         self.assertEqual(db.migrate(), [])  # idempotent
         ok, msg = db.integrity_check()
         self.assertTrue(ok, msg)

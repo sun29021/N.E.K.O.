@@ -102,11 +102,23 @@ class ApprovalDialog(QDialog):
         self._expiry.timeout.connect(self.reject)
         self._expiry.start(timeout_s * 1000)
         self._resolved = False
+        # Answered on your phone instead: close this copy of the question.
+        self._elsewhere = QTimer(self)
+        self._elsewhere.timeout.connect(self._check_elsewhere)
+        self._elsewhere.start(400)
+
+    def _check_elsewhere(self) -> None:
+        if self.req.decided and not self._resolved:
+            self._resolved = True
+            self._expiry.stop()
+            self._elsewhere.stop()
+            super().done(QDialog.DialogCode.Rejected.value)
 
     def done(self, result: int) -> None:  # noqa: D401 - Qt override
         if not self._resolved:
             self._resolved = True
             self._expiry.stop()
+            self._elsewhere.stop()
             self.req.resolve(result == QDialog.DialogCode.Accepted.value
                              if isinstance(result, int) else result == QDialog.DialogCode.Accepted)
         super().done(result)

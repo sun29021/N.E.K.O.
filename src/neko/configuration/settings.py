@@ -156,6 +156,20 @@ class ToolsSection:
 
 
 @dataclass
+class PhoneSection:
+    # Chat with her from Telegram (text, voice notes, photos, files). Needs privacy.allow_network and a bot
+    # key in secrets.toml; only the paired owner's chat is ever answered.
+    telegram: bool = False
+    # Live call page, reachable only through Tailscale (scripts/phone-call.ps1 shares it inside the tailnet).
+    calls: bool = False
+    call_port: int = 8791              # local only (127.0.0.1); Tailscale serves it as https on call_https_port
+    call_https_port: int = 8443
+    voice_replies: str = "auto"        # auto = a voice note back when you sent one; always; never
+    notify_long_jobs: bool = True      # "done: ..." on the phone when a long PC job finishes
+    notify_battery: bool = True        # "battery at 15%" on the phone
+
+
+@dataclass
 class RemoteEndpoint:
     name: str
     url: str
@@ -182,6 +196,7 @@ class Settings:
     ui: UISection = field(default_factory=UISection)
     tools: ToolsSection = field(default_factory=ToolsSection)
     remote: RemoteSection = field(default_factory=RemoteSection)
+    phone: PhoneSection = field(default_factory=PhoneSection)
     source_files: list[str] = field(default_factory=list)
 
     # ---- derived paths (all outside the source repository) ----
@@ -284,7 +299,7 @@ def settings_from_dict(raw: dict[str, Any]) -> Settings:
     simple = {
         "app": AppSection, "privacy": PrivacySection, "models": ModelsSection,
         "resources": ResourcesSection, "storage": StorageSection, "voice": VoiceSection,
-        "vision": VisionSection, "ui": UISection, "tools": ToolsSection,
+        "vision": VisionSection, "ui": UISection, "tools": ToolsSection, "phone": PhoneSection,
     }
     for key, value in raw.items():
         if key in simple:
@@ -323,6 +338,10 @@ def validate(s: Settings) -> None:
         problems.append("app.verbosity must be brief, balanced or detailed")
     if s.app.log_level.upper() not in ("DEBUG", "INFO", "WARNING", "ERROR"):
         problems.append("app.log_level must be DEBUG, INFO, WARNING or ERROR")
+    if s.phone.voice_replies not in ("auto", "always", "never"):
+        problems.append("phone.voice_replies must be auto, always or never")
+    if not (1024 <= s.phone.call_port <= 65535) or not (1 <= s.phone.call_https_port <= 65535):
+        problems.append("phone.call_port / call_https_port must be valid port numbers")
     url = urlparse(s.models.ollama_url)
     if url.scheme not in ("http", "https") or not url.hostname:
         problems.append("models.ollama_url must look like http://127.0.0.1:11434")

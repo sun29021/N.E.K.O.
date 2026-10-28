@@ -141,6 +141,7 @@ class Controller:
         self.updater.available.connect(self._on_update_available)
         self.updater.finished.connect(self._on_update_finished)
         self._timers()
+        self._init_phone()
 
     # ------------------------------------------------------------------ setup
     def _init_voice(self) -> None:
@@ -163,6 +164,42 @@ class Controller:
         self.voice.problem.connect(lambda m: self.hud.status.setText(m))
         if ok and self.neko.settings.voice.always_listen:
             self.set_always_listen(True)
+
+    def _init_phone(self) -> None:
+        """Telegram chat + live calls + reminders. Nothing connects until you switch it on in
+        Command Center > Phone; after that it reconnects by itself at every start."""
+        from ..phone.call import CallServer
+        from ..phone.service import PhoneService
+        from .phone_tab import PhoneTab
+
+        self.phone = PhoneService(self.neko, voice=lambda: self.voice, capture=self.bridge.capture_blocking)
+        self.calls = CallServer(self.neko, self.phone, voice=lambda: self.voice)
+        on_pc = self.bridge._on_approval_needed
+
+        def ask_everywhere(req: Any) -> None:
+            on_pc(req)                        # the dialog on the PC, as always
+            self.phone.approval_handler(req)  # + Approve/Deny on the phone, for requests from the phone
+
+        self.neko.policy.set_approval_handler(ask_everywhere)
+        self.cc.tabs.addTab(PhoneTab(self.neko, self.phone, self.calls), "Phone")
+        self.bridge.reminder.connect(self._on_reminder)
+        if self.neko.routines is not None:
+            self.neko.routines.start()
+        if self.neko.settings.phone.telegram:
+            threading.Thread(target=self.phone.start, daemon=True, name="neko-phone-start").start()
+        if self.neko.settings.phone.calls:
+            self.calls.start()
+
+    def _on_reminder(self, r: dict) -> None:
+        late = f" (it was due at {r.get('due')})" if r.get("late") else ""
+        text = f"Reminder: {r.get('text', '')}{late}"
+        self.show_hud()
+        self.hud.setText(text)
+        if hasattr(self, "tray"):
+            self.tray.showMessage("N.E.K.O. reminder", text)
+        if self.voice is not None and self.neko.settings.voice.enabled:
+            self.voice.speak(f"Hey, a reminder: {r.get('text', '')}.", "calm", queue=True)
+        threading.Thread(target=self.phone.notify, args=(text,), daemon=True).start()
 
     def set_always_listen(self, on: bool) -> None:
         if self.voice is None:
@@ -459,6 +496,7 @@ class Controller:
             # answer - announce it after the current reply has been spoken.
             self.cc.finish_reply(reply, "")
             self.hud.status.setText(f"Finished: {getattr(reply, 'goal', '') or 'background task'}")
+            self._tell_phone_if_long(reply)
             if self.voice is not None and reply.succeeded and self.neko.settings.voice.enabled:
                 self.voice.speak(reply.speech or reply.text, reply.emotion, queue=True)
             return
@@ -488,8 +526,18 @@ class Controller:
             self.show_brain()
         elif getattr(reply, "action", "") == "open_armory":
             self.show_armory()
+        self._tell_phone_if_long(reply)
         if getattr(reply, "action", "") == "quit":  # "Neko, close yourself" - after saying goodbye
             QTimer.singleShot(int(1000 + 70 * len(reply.text)), self.quit)
+
+    def _tell_phone_if_long(self, reply: Any) -> None:
+        from ..orchestration.smart import is_long_job
+
+        goal = getattr(reply, "goal", "")
+        if (hasattr(self, "phone") and self.neko.settings.phone.notify_long_jobs and self.phone.paired
+                and is_long_job(goal)):
+            note = f"{'Done' if reply.succeeded else 'Finished with a problem'}: {goal}\n\n{reply.text[:1500]}"
+            threading.Thread(target=self.phone.notify, args=(note,), daemon=True).start()
 
     def _on_approval(self, req: Any) -> None:
         parent = self.cc if self.cc.isVisible() else None
@@ -553,6 +601,11 @@ class Controller:
 
     def quit(self) -> None:
         self.stop()
+        if hasattr(self, "phone"):
+            self.phone.stop()
+            self.calls.stop()
+        if self.neko.routines is not None:
+            self.neko.routines.stop()
         self.music.shutdown()
         self.tray.hide()
         self.neko.shutdown()

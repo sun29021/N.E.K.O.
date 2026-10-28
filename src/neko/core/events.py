@@ -27,6 +27,7 @@ RESOURCES = "resources"          # payload: ResourceSnapshot dict
 ERROR = "error"                  # payload: {"message": str}
 SETTINGS = "settings"            # payload: changed settings (e.g. voice gender) - the UI applies them live
 EMOTION = "emotion"              # payload: {"emotion": str} - her mood, known as soon as she starts answering
+REMINDER = "reminder"            # payload: {"id", "text", "due", "late"} - a reminder is due
 VISUAL = "visual"                # payload: {"title", "markdown", "image": bytes|None, "source", "kind"}
 
 
@@ -34,6 +35,7 @@ VISUAL = "visual"                # payload: {"title", "markdown", "image": bytes
 class Event:
     topic: str
     payload: dict[str, Any] = field(default_factory=dict)
+    origin: str = ""                  # "phone" for requests from your phone (core/origin.py)
 
 
 Handler = Callable[[Event], None]
@@ -58,7 +60,9 @@ class EventBus:
     def publish(self, topic: str, **payload: Any) -> None:
         with self._lock:
             handlers = list(self._subs.get(topic, ())) + list(self._subs.get("*", ()))
-        event = Event(topic, payload)
+        from .origin import current
+
+        event = Event(topic, payload, current())
         for h in handlers:
             try:
                 h(event)

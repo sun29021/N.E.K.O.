@@ -55,6 +55,7 @@ class Neko:
     paths: PathPolicy
     coordinator: Coordinator
     log_path: Path
+    routines: Any = None               # reminders + learned skills (routines/)
 
     def maintenance(self) -> dict[str, int]:
         """Cheap housekeeping, safe to run at startup."""
@@ -147,5 +148,9 @@ def build(settings: Settings | None = None, *, db_path: str | None = None, conso
         settings=s, bus=bus, estop=estop, router=router, lifecycle=lifecycle, monitor=monitor, memory=memory,
         conversations=conversations, tasks=tasks, tools=registry, executor=executor, paths=paths,
     )
-    return Neko(s, bus, estop, db, memory, conversations, tasks, monitor, providers, router, lifecycle,
+    neko = Neko(s, bus, estop, db, memory, conversations, tasks, monitor, providers, router, lifecycle,
                 policy, registry, executor, paths, coordinator, log_path)
+    from ..routines import attach_routines
+
+    neko.routines = attach_routines(neko)  # reminders + learned skills (the UI starts the reminder clock)
+    return neko

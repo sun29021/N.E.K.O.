@@ -24,6 +24,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from ..core import events as ev
+from ..core import origin
 from ..core.cancel import CancelToken, EmergencyStop
 from ..core.errors import CancelledError, ModelTimeoutError, ModelUnavailableError, NekoError
 from ..core.emotion import looks_like_tag_prefix, resolve_emotion, split_emotion, strip_inline_tags
@@ -131,6 +132,10 @@ class Coordinator:
         self.screen_capturer: Callable[[], bytes | None] | None = None
         self.explorer: Callable[[], list[dict[str, Any]]] = explorer_windows  # replaced in tests
         self.last_visual: dict[str, Any] | None = None   # what the side panel showed last ("show me again")
+        # Add-ons: (text, conversation, task, token) -> (reply, emotion) or None to pass; and
+        # (request, reply) callbacks after every reply (e.g. "want me to save that as a skill?").
+        self.extensions: list[Callable[[str, str, Any, CancelToken], tuple[str, str] | None]] = []
+        self.after_reply: list[Callable[[str, Reply], None]] = []
 
     # ------------------------------------------------------------------ helpers
     def _state(self, state: AssistantState, detail: str = "") -> None:
@@ -199,6 +204,10 @@ class Coordinator:
         try:
             if app_cmd is not None:
                 reply.action, reply.text, reply.emotion = app_cmd
+                self.tasks.transition(task, "succeeded")
+                self.tasks.record_outcome(task, succeeded=True)
+            elif not images and (ext := self._extension(text, conv, task, token)):
+                reply.text, reply.emotion = ext  # reminders, learned skills, phone commands
                 self.tasks.transition(task, "succeeded")
                 self.tasks.record_outcome(task, succeeded=True)
             elif not images and (word := learn_request(text)):
@@ -276,7 +285,23 @@ class Coordinator:
             self.bus.publish(ev.TASK, id=task.id, goal=text[:120], kind=intent.kind.value, status=task.status)
             if reply.succeeded:
                 self._state(AssistantState.IDLE)
+        for after in self.after_reply:
+            try:
+                after(text, reply)
+            except Exception:  # noqa: BLE001 - an add-on must never break a reply
+                log.exception("after-reply hook failed")
         return reply
+
+    def _extension(self, text: str, conv: str, task: Any, token: CancelToken) -> tuple[str, str] | None:
+        """Add-ons (reminders, learned skills, phone-only commands) get the first look at a request."""
+        for handler in self.extensions:
+            try:
+                done = handler(text, conv, task, token)
+            except NekoError as exc:
+                return exc.user_message, "sad"
+            if done:
+                return done
+        return None
 
     # ------------------------------------------------------------------ memory commands
     def _memory_command(self, intent: Intent, task_id: str) -> str:
@@ -835,7 +860,7 @@ class Coordinator:
             picture_thread.start()
         # "What's the problem on this thing?" with no file/folder named -> look at the screen.
         if (not images and self.screen_capturer is not None and self.s.vision.auto_screen_context
-                and screen_reference(text)):
+                and screen_reference(text) and not origin.current()):  # never peek at the PC from the phone
             self._state(AssistantState.TOOL, "looking at your screen")
             png = self.screen_capturer()
             if png:
