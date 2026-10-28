@@ -36,6 +36,11 @@ What happens, in order:
 
 Re-running is safe: finished steps are skipped and your profile is kept unless you choose to replace it.
 
+## After installing
+- **Share its GPU with the laptop**: install Tailscale (same account as the laptop), then run
+  `powershell -ExecutionPolicy Bypass -File D:\NEKO\app\scripts\share-gpu.ps1` - see docs/UPDATES.md.
+- **Updates**: tray icon > Install update when Neko says one is ready.
+
 ## Notes
 - The office Neko has its own memory (the laptop's isn't copied). Sync can come later.
 - Uses the `desktop-16gb` profile: qwen3:14b for chat and reasoning, 16k-token context, GPU speech.

@@ -191,6 +191,14 @@ with your keys (RAM question via tool 1.2 s; your exact Hisab sentence summarise
 | Office installer | **real end-to-end install on this laptop into D:\NEKO-TEST** (uv, Python 3.11, packages, portable Ollama, voice + speech files, profile, self-test 231/231, health check). Found + fixed 3 bugs this way (stderr treated as fatal, Neko not registered in the venv, doctor crash on a damaged DB). Not yet run on the office PC itself; the AI-model download step was skipped in the test. D:\NEKO-TEST can be deleted. |
 **231/231 tests pass.**
 
+## 6n. 0.7.1 - autostart, office GPU, updates
+| Feature | Verified how |
+|---|---|
+| Start with Windows, hidden until "Neko" | Startup shortcut created in your real Startup folder; hidden-start unit test (Qt). Not yet seen at a real sign-in. |
+| Office GPU over Tailscale | same path tested on the laptop through `tailscale serve` (models 0.06 s, chat OK, offline skip 2.5 s) + unit tests; the office side isn't set up yet |
+| One-click updates | local end-to-end simulation (update applied; broken update rolled back). Needs your private GitHub repo to go live. |
+**234/234 tests pass.**
+
 ## 7. PC crashes on 2026-10-27 (investigated read-only)
 | Time | Bug check | Meaning |
 |---|---|---|

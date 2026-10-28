@@ -3,6 +3,18 @@
 All notable changes. Versions follow semantic versioning; database schema and
 config versions are tracked separately (see docs/DATABASE_SCHEMA.md).
 
+## [0.7.1] - 2026-10-28 - start with Windows, office GPU from the laptop, one-click updates
+
+### Added
+- Start with Windows, hidden: `scripts/autostart.ps1`, Settings checkbox, installer question. Neko starts
+  invisible at sign-in (`neko ui --background`) and appears when you say her name. On for the owner's laptop.
+- Office GPU over Tailscale (`models/office.py`, `scripts/share-gpu.ps1`): the office PC shares Ollama only
+  inside your tailnet via `tailscale serve` (no firewall change); the laptop (`models.office_url = "auto"`)
+  finds it and prefers its bigger models, skipping it quickly when offline. Tested through tailscale serve.
+- One-click updates from a private GitHub repo: `scripts/update.ps1` (check / backup / fast-forward /
+  packages / self-test / automatic rollback), `scripts/publish-update.ps1` (tests + no personal files or keys),
+  background check every 6 h + tray "Install update"; the installer connects new PCs to the repo.
+  Simulated end to end: a good update applied, a broken one rolled back. The project is now a git repository.
 ## [0.7.0] - 2026-10-28 - natural voices, Bangla, word-by-word subtitles, brain map, office installer
 
 ### Added
