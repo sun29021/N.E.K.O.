@@ -63,7 +63,35 @@ PROFILES: dict[str, ModelProfile] = {
         },
         num_ctx=16384,
     ),
+    # Two 16 GB GPUs (the office MSI with 2x RTX 5060 Ti): Ollama splits a 27-32B model across both cards.
+    "desktop-32gb": ModelProfile(
+        "desktop-32gb",
+        "Desktop with ~32 GB of GPU memory (e.g. 2x RTX 5060 Ti 16 GB): 27-32B models across both GPUs.",
+        {
+            "fast": ["qwen3:4b", "qwen3:8b", "qwen3:14b"],
+            "chat": ["qwen3:32b", "qwen3:14b", "qwen3:8b"],
+            "reasoning": ["qwen3:32b", "qwen3:14b"],
+            "deep": ["qwen3:32b", "qwen3:14b"],
+            "coding": ["qwen2.5-coder:32b", "qwen3:32b", "qwen2.5-coder:14b"],
+            "vision": ["gemma3:27b", "gemma3:12b", "qwen2.5vl:7b"],
+            "embedding": ["bge-m3", "nomic-embed-text"],
+        },
+        num_ctx=24576,
+    ),
 }
+
+
+def office_rank(role: str, model: str) -> int | None:
+    """Where a model on the office PC stands in the big-desktop preferences for a role (0 = best).
+    The laptop uses this to pick the office's best model instead of any model the office has."""
+    def norm(n: str) -> str:
+        n = n.lower()
+        return n if ":" in n else n + ":latest"
+
+    order: list[str] = []
+    for prof in ("desktop-32gb", "desktop-16gb"):
+        order += [n for n in PROFILES[prof].roles.get(role, []) if n not in order]
+    return next((i for i, n in enumerate(order) if norm(n) == norm(model)), None)
 
 
 def get_profile(name: str) -> ModelProfile:

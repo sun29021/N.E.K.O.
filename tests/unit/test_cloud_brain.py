@@ -141,3 +141,16 @@ class OfficeGpuTests(unittest.TestCase):
         r = n.coordinator.handle("explain photosynthesis simply")
         self.assertEqual((r.text, r.location), ("from the office GPU", "lan:office"))
         self.assertEqual(local.requests, [])
+    def test_laptop_picks_the_offices_best_model(self):
+        from neko.core.types import TaskKind
+
+        office = FakeProvider(models=[ModelInfo(m, "ollama-office", "lan:office", {Capability.CHAT})
+                                      for m in ("qwen3:4b", "llama3.2:3b", "qwen3:32b", "qwen3:14b")],
+                              location="lan:office")
+        n = build_test_neko(temp_dir(), FakeProvider())
+        self.addCleanup(n.shutdown)
+        n.router.providers.append(office)
+        n.router.allow_remote = True
+        n.router.refresh(force=True)
+        d = n.router.route(TaskKind.QUESTION, n.monitor.snapshot())
+        self.assertEqual((d.model.name, d.model.location), ("qwen3:32b", "lan:office"))

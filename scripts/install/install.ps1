@@ -15,7 +15,8 @@
          - voice files (Kokoro), speech model (Whisper)         - from GitHub / Hugging Face
          - AI models sized for this GPU                         - from the Ollama library
        NVIDIA drivers are never installed silently: if yours is too old, the NVIDIA download page opens.
-    3. ASK for the profile: your name, what the assistant is called, female or male voice, Bangla.
+    3. ASK for the profile: your name, what the assistant is called, female or male voice, Bangla, and
+       (optional) a Telegram bot key for THIS PC's phone - every PC gets its own bot.
        Optional free cloud keys (Groq / Gemini) are typed by YOU here and stored only on this PC.
     4. Create Desktop + Start Menu shortcuts, run the self-test, and start Neko.
   Nothing is written outside the install folder, %LOCALAPPDATA%\NEKO and your shortcuts. Safe to re-run.
@@ -78,9 +79,14 @@ $gpuName = ""; $vramMB = 0; $driver = ""
 $smi = Get-Command nvidia-smi -ErrorAction SilentlyContinue
 if ($smi) {
     try {
-        $q = & nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader,nounits 2>$null | Select-Object -First 1
-        $parts = $q.Split(",") | ForEach-Object { $_.Trim() }
-        $gpuName, $vramMB, $driver = $parts[0], [int]$parts[1], $parts[2]
+        # every NVIDIA card counts: Ollama spreads a big model over all of them (2x 16 GB = 32 GB)
+        $gpus = @(& nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv,noheader,nounits 2>$null |
+            Where-Object { $_ -match "," } | ForEach-Object { , ($_.Split(",") | ForEach-Object { $_.Trim() }) })
+        if ($gpus.Count -gt 0) {
+            $gpuName = $(if ($gpus.Count -gt 1) { "$($gpus.Count)x $($gpus[0][0])" } else { $gpus[0][0] })
+            $vramMB = ($gpus | ForEach-Object { [int]$_[1] } | Measure-Object -Sum).Sum
+            $driver = $gpus[0][2]
+        }
     } catch { }
 }
 if (-not $gpuName) { $gpuName = ((Get-CimInstance Win32_VideoController | Select-Object -First 1).Name) }
@@ -100,7 +106,7 @@ $rows = @(
     @("Memory", "$ramGB GB", $(if ($ramGB -ge 15) { "ok" } else { "low - 16 GB+ recommended" })),
     @("Graphics", "$gpuName$(if ($vramMB) { ", $([math]::Round($vramMB/1024)) GB" })", $(if ($vramMB -ge 6000) { "ok - GPU AI" } elseif ($vramMB) { "small GPU - lighter models" } else { "no NVIDIA GPU - CPU + cloud only" })),
     @("NVIDIA driver", $(if ($driver) { $driver } else { "-" }), "checked below"),
-    @("Free disk ($drive)", "$freeGB GB", $(if ($freeGB -ge 45) { "ok" } elseif ($freeGB -ge 15) { "enough for light models" } else { "too little - free some space" })),
+    @("Free disk ($drive)", "$freeGB GB", $(if ($freeGB -ge 85) { "ok - room for the biggest models" } elseif ($freeGB -ge 45) { "ok" } elseif ($freeGB -ge 15) { "enough for light models" } else { "too little - free some space" })),
     @("Internet", $(if ($online) { "reachable" } else { "not reachable" }), $(if ($online) { "ok" } else { "needed for the install" })),
     @("uv / Python 3.11", $(if ($uvExe) { $uvExe } else { "missing" }), $(if ($uvExe) { "ok" } else { "will install" })),
     @("Ollama", $(if (Test-Path $ollamaExe) { $ollamaExe } else { "missing" }), $(if (Test-Path $ollamaExe) { "ok" } else { "will install (portable)" })),
@@ -121,17 +127,26 @@ if (-not $online) { Say "`nThe install needs internet. Connect and run it again.
 if ($freeGB -lt 15) { Say "`nNot enough free disk space on $drive." Red; exit 1 }
 
 # model plan by video memory
-if ($Models -eq "auto") { $Models = if ($vramMB -ge 12000) { "full" } elseif ($vramMB -ge 6000) { "light" } else { "light" } }
-$profileName = if ($vramMB -ge 12000) { "desktop-16gb" } else { "laptop-lite" }
+$big = $vramMB -ge 28000   # ~32 GB of GPU memory (two 16 GB cards): 27-32B models
+if ($Models -eq "auto") {
+    $Models = if ($big -and $freeGB -lt 85) { "light" } elseif ($vramMB -ge 12000) { "full" } else { "light" }
+}
+$profileName = if ($big) { "desktop-32gb" } elseif ($vramMB -ge 12000) { "desktop-16gb" } else { "laptop-lite" }
 $modelList = switch ($Models) {
-    "full"  { if ($vramMB -ge 12000) { @("qwen3:14b", "qwen3:4b", "qwen2.5-coder:14b", "gemma3:12b", "bge-m3") } else { @("qwen3:8b", "qwen3:4b", "qwen2.5-coder:7b", "gemma3:4b", "bge-m3") } }
-    "light" { if ($vramMB -ge 12000) { @("qwen3:14b", "qwen3:4b", "bge-m3") } else { @("llama3.2:3b", "qwen3:1.7b", "bge-m3") } }
+    "full"  { if ($big) { @("qwen3:32b", "qwen3:14b", "qwen3:4b", "qwen2.5-coder:32b", "gemma3:27b", "bge-m3") }
+              elseif ($vramMB -ge 12000) { @("qwen3:14b", "qwen3:4b", "qwen2.5-coder:14b", "gemma3:12b", "bge-m3") }
+              else { @("qwen3:8b", "qwen3:4b", "qwen2.5-coder:7b", "gemma3:4b", "bge-m3") } }
+    "light" { if ($big) { @("qwen3:32b", "qwen3:4b", "bge-m3") }
+              elseif ($vramMB -ge 12000) { @("qwen3:14b", "qwen3:4b", "bge-m3") }
+              else { @("llama3.2:3b", "qwen3:1.7b", "bge-m3") } }
     default { @() }
 }
+$downloadGB = switch ($Models) { "full" { if ($big) { 75 } else { 35 } } "light" { if ($big) { 28 } else { 18 } } default { 6 } }
 $sttModel = if ($vramMB -ge 6000) { "large-v3-turbo" } else { "small" }
 $sttDevice = if ($vramMB -ge 6000) { "cuda" } else { "cpu" }
 Say "`nPlan: profile $profileName, speech '$sttModel' on $sttDevice, models: $(if ($modelList) { $modelList -join ', ' } else { 'none' })" Green
-if (-not (Ask "Install N.E.K.O. into $InstallDir now? (downloads roughly $(if ($Models -eq 'full') {'35'} elseif ($Models -eq 'light') {'18'} else {'6'}) GB)")) { exit 0 }
+if ($freeGB -lt $downloadGB + 10) { Say "  Only $freeGB GB free on $drive - choose -Models light, or free some space." Yellow }
+if (-not (Ask "Install N.E.K.O. into $InstallDir now? (downloads roughly $downloadGB GB)")) { exit 0 }
 
 # ------------------------------------------------------------------ 2. install
 # From here on, programs print progress and harmless warnings on stderr; Windows PowerShell 5.1 would treat
@@ -161,7 +176,19 @@ if ($Repo) {
         & $gitExe remote remove origin 2>$null
         & $gitExe remote add origin $Repo
         & $gitExe fetch -q origin main
-        if ($LASTEXITCODE -eq 0) { & $gitExe reset -q --hard origin/main; Say "    connected - updates will come from $Repo" }
+        if ($LASTEXITCODE -eq 0) {
+            # never let the repo replace this package with an OLDER version (e.g. not published yet)
+            $verOf = { param($txt) if ($txt -match '(?m)^version\s*=\s*"([\d.]+)"') { [version]$Matches[1] } else { [version]"0.0" } }
+            $mine = & $verOf (Get-Content "$App\pyproject.toml" -Raw)
+            $theirs = & $verOf ((& $gitExe show origin/main:pyproject.toml 2>$null) -join "`n")
+            if ($theirs -ge $mine) { & $gitExe reset -q --hard origin/main; Say "    connected - updates will come from $Repo (version $theirs)" }
+            else {
+                Pop-Location; Remove-Item -Recurse -Force "$App\.git"; Push-Location $App
+                robocopy $Package $App /E /NFL /NDL /NJH /NJS /NP /XD .venv __pycache__ .pytest_cache .git | Out-Null
+                Say "    the update repo still has $theirs, older than this package ($mine) - kept $mine." Yellow
+                Say "    Publish the update from the main PC, then run this installer again to switch on updates." Yellow
+            }
+        }
         else { Say "    couldn't reach the update repo now; Neko still works. Run the installer again later to connect." Yellow }
         Pop-Location
     } else { Say "    Git missing - one-click updates are off (Neko itself works)." Yellow }
@@ -228,6 +255,24 @@ if ([string]::IsNullOrWhiteSpace($name)) { $name = "Neko" }
 $g = if ($Voice) { $Voice } else { Read-Host "  Voice: female or male? [female]" }
 $gender = if ($g.Trim().ToLower().StartsWith("m")) { "male" } else { "female" }
 $bn = if ($Yes) { $false } else { Ask "  Do you also talk to $name in Bangla? (she understands and can answer in native Bangla)" "N" }
+# Phone: every PC needs ITS OWN Telegram bot (two PCs on one bot would steal each other's messages)
+$tgToken = ""
+if (-not $Yes -and (Ask "  Control $name from a phone through Telegram? (you'll make a NEW bot just for this PC)" "N")) {
+    Say "    On the phone that will control THIS PC: open Telegram > search @BotFather (blue tick) > send /newbot" DarkGray
+    Say "    > give it a name (e.g. `"$name`") and a username ending in 'bot' > copy the key it sends." DarkGray
+    Say "    Use a NEW bot - not the one your other PC uses." Yellow
+    for ($try = 0; $try -lt 3 -and -not $tgToken; $try++) {
+        $sec = Read-Host "    Paste the bot key (or press Enter to skip)" -AsSecureString
+        $k = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($sec)).Trim()
+        if (-not $k) { break }
+        if ($k -notmatch '^\d{5,}:[\w-]{30,}$') { Say "    That doesn't look like a bot key (numbers:letters). Try again." Yellow; continue }
+        try {
+            $me = Invoke-RestMethod -Uri "https://api.telegram.org/bot$k/getMe" -TimeoutSec 15
+            Say "    bot @$($me.result.username) is ready" Green
+            $tgToken = $k
+        } catch { Say "    Telegram didn't accept that key - copy it again from @BotFather." Yellow }
+    }
+}
 $wake = @($name.ToLower())
 if ($name.ToLower() -eq "neko") { $wake = @("neko", "nico", "niko", "neeko", "necko", "nekko") }
 $wakeToml = ($wake | ForEach-Object { '"' + $_ + '"' }) -join ", "
@@ -250,7 +295,7 @@ allow_cloud_models = true
 
 [models]
 profile = "$profileName"
-num_ctx = $(if ($vramMB -ge 12000) { 16384 } else { 8192 })
+num_ctx = $(if ($big) { 24576 } elseif ($vramMB -ge 12000) { 16384 } else { 8192 })
 
 [voice]
 enabled = true
@@ -275,6 +320,9 @@ claude_code = true
 [ui]
 style = "orb"
 always_on_top = true
+
+[phone]
+telegram = $(if ($tgToken) { 'true' } else { 'false' })
 "@
 if ((Test-Path "$dataDir\config.toml") -and -not (Ask "  A Neko profile already exists on this PC. Replace it?" "N")) {
     Say "    kept the existing profile"
@@ -284,17 +332,27 @@ if ((Test-Path "$dataDir\config.toml") -and -not (Ask "  A Neko profile already 
 }
 New-Item -ItemType Directory -Force "$InstallDir\Notes" | Out-Null
 
+$keys = [ordered]@{}
+if (Test-Path "$dataDir\secrets.toml") {   # keep keys saved earlier on this PC
+    foreach ($line in Get-Content "$dataDir\secrets.toml") { if ($line -match '^\s*([\w-]+)\s*=\s*"([^"]*)"') { $keys[$Matches[1]] = $Matches[2] } }
+}
+if ($tgToken) { $keys["telegram_bot_token"] = $tgToken }
 if (-not $Yes -and (Ask "  Add free cloud brains now? (Groq + Gemini keys - you can also do this later in Settings)" "N")) {
     Say "    Get keys at https://console.groq.com/keys and https://aistudio.google.com/apikey" DarkGray
     $groq = Read-Host "    Paste your Groq key (or press Enter to skip)" -AsSecureString
     $gem = Read-Host "    Paste your Gemini key (or press Enter to skip)" -AsSecureString
     $plain = { param($s) [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s)) }
-    $lines = @("# N.E.K.O. cloud keys - private. Never share this file.", "[cloud]")
-    $k1 = & $plain $groq; $k2 = & $plain $gem
-    if ($k1) { $lines += "groq_key = `"$k1`"" }
-    if ($k2) { $lines += "gemini_key = `"$k2`"" }
+    $k1 = (& $plain $groq).Trim(); $k2 = (& $plain $gem).Trim()
+    if ($k1) { $keys["groq_key"] = $k1 }
+    if ($k2) { $keys["gemini_key"] = $k2 }
+}
+if ($keys.Count -gt 0) {
+    $lines = @("# N.E.K.O. keys - private. Never share this file.", "[cloud]") + @($keys.Keys | ForEach-Object { "$_ = `"$($keys[$_])`"" })
     [IO.File]::WriteAllText("$dataDir\secrets.toml", ($lines -join "`n") + "`n", (New-Object Text.UTF8Encoding $false))
-    Say "    saved privately in $dataDir\secrets.toml"
+    Say "    keys saved privately in $dataDir\secrets.toml"
+}
+if ($tgToken -and (Test-Path "$dataDir\config.toml") -and -not ((Get-Content "$dataDir\config.toml" -Raw) -match '(?m)^\[phone\]')) {
+    Add-Content -Path "$dataDir\config.toml" -Value "`n[phone]`ntelegram = true" -Encoding UTF8   # kept profile: switch Telegram on
 }
 
 # ------------------------------------------------------------------ 4. finish
@@ -320,6 +378,8 @@ $env:NEKO_CONFIG = "$dataDir\config.toml"
 Remove-Item Env:NEKO_CONFIG
 Pop-Location
 Say "`nDone! Start $name with the Desktop icon (or the Start Menu)." Green
+if ($tgToken) { Say "When $name starts she shows a pairing code - send  /pair <code>  to your new bot from THIS PC's phone." Green }
+Say "Phone calls: install Tailscale here and on that phone, then Command Center > Phone > Turn on calls (docs\PHONE.md)." DarkGray
 if (-not $NoStart -and (Ask "Start $name now?")) {
     Start-Process powershell.exe -WindowStyle Hidden -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "$App\scripts\start-neko.ps1")
 }

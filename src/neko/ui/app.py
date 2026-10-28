@@ -181,7 +181,10 @@ class Controller:
             self.phone.approval_handler(req)  # + Approve/Deny on the phone, for requests from the phone
 
         self.neko.policy.set_approval_handler(ask_everywhere)
-        self.cc.tabs.addTab(PhoneTab(self.neko, self.phone, self.calls), "Phone")
+        tab = PhoneTab(self.neko, self.phone, self.calls)
+        self.cc.tabs.addTab(tab, "Phone")
+        tab.hint.connect(self._show_hint)
+        self.phone.on_pairing_hint = tab.hint.emit  # (called from the connecting thread; Qt queues it)
         self.bridge.reminder.connect(self._on_reminder)
         if self.neko.routines is not None:
             self.neko.routines.start()
@@ -189,6 +192,12 @@ class Controller:
             threading.Thread(target=self.phone.start, daemon=True, name="neko-phone-start").start()
         if self.neko.settings.phone.calls:
             self.calls.start()
+
+    def _show_hint(self, text: str) -> None:
+        self.show_hud()
+        self.hud.setText(text)
+        if hasattr(self, "tray"):
+            self.tray.showMessage("N.E.K.O. phone", text)
 
     def _on_reminder(self, r: dict) -> None:
         late = f" (it was due at {r.get('due')})" if r.get("late") else ""

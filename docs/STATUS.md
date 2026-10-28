@@ -220,6 +220,14 @@ with your keys (RAM question via tool 1.2 s; your exact Hisab sentence summarise
   replay out of order - now sorted by insertion too). Not yet verified for real: a live Telegram bot (needs the owner's bot key),
   a call from the phone through Tailscale, and Ray-Ban glasses as the headset.
 
+## 6q. 0.8.1 - office install with its own phone
+- Installer: all GPUs summed (2x 5060 Ti -> 32 GB, simulated), `desktop-32gb` plan, own Telegram bot step
+  (format + getMe check), keys merged not overwritten (tested), never downgrades to an older repo version.
+- Verified 2026-10-28: full test install into D:\NEKO-TEST (-Models none): kept 0.8.0 over GitHub's 0.7.1,
+  self-test 266 OK. 266 unit tests OK here (new: laptop picks office qwen3:32b, shared bot 409 detected,
+  pairing code shown on first start, separate PCs never share pairing/call key).
+- Not yet run on the real office PC.
+
 ## 7. PC crashes on 2026-10-27 (investigated read-only)
 | Time | Bug check | Meaning |
 |---|---|---|

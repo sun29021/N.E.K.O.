@@ -443,7 +443,7 @@ class CommandCenter(QMainWindow):
         self.set_verbosity.setCurrentText(s.app.verbosity)
         form.addRow("Answer length", self.set_verbosity)
         self.set_profile = QComboBox()
-        self.set_profile.addItems(["existing-only", "laptop-lite", "desktop-16gb"])
+        self.set_profile.addItems(["existing-only", "laptop-lite", "desktop-16gb", "desktop-32gb"])
         self.set_profile.setCurrentText(s.models.profile)
         form.addRow("Model profile", self.set_profile)
         self.set_voice = QCheckBox("Speak replies aloud")

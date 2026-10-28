@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import subprocess
 import threading
+import time
 from pathlib import Path
 from typing import Any
 
@@ -38,6 +39,7 @@ def _row(*widgets: QWidget) -> QWidget:
 
 class PhoneTab(QWidget):
     message = Signal(str)   # results from background work, shown on the GUI thread
+    hint = Signal(str)      # "pair your phone: send /pair 123456" (also shown on the orb)
 
     def __init__(self, neko: Any, phone: Any, calls: Any) -> None:
         super().__init__()
@@ -142,9 +144,13 @@ class PhoneTab(QWidget):
         who = f", paired with {p.state.owner_name or 'your phone'}" if p.paired else ", not paired yet"
         self.status.setText(f"Telegram: {p.status}{bot}{who if p.running else ''}  |  "
                             f"Calls: {'on' if s.phone.calls else 'off'}")
-        if not p._pair_code:
-            self.pair_info.setText(f"Paired with {p.state.owner_name or 'your phone'}." if p.paired else
-                                   "Not paired.")
+        if p.paired:
+            self.pair_info.setText(f"Paired with {p.state.owner_name or 'your phone'}.")
+        elif p._pair_code and time.time() < p._pair_until:
+            self.pair_info.setText(f"In Telegram, open @{p.bot_name} and send:  /pair {p._pair_code}  "
+                                   f"(valid {max(1, int((p._pair_until - time.time()) // 60))} more min)")
+        else:
+            self.pair_info.setText("Not paired - click Pair my phone.")
         self.call_btn.setText("Turn off calls" if s.phone.calls else "Turn on calls")
         self.call_info.setText("Your phone needs the free Tailscale app, signed in to your account." if not
                                s.phone.calls else "On - send yourself the link, then tap it on the phone.")

@@ -228,6 +228,64 @@ class CallPageTests(Base):
         self.assertEqual(self.calls._httpd.server_address[0], "127.0.0.1")
 
 
+class TwoPcTests(Base):
+    def test_same_bot_on_two_pcs_is_reported(self):
+        import threading
+
+        from neko.phone.service import SHARED_BOT
+        from neko.phone.telegram import TelegramError
+
+        class Conflict(FakeApi):
+            def get_updates(self, offset, wait_s=50):
+                raise TelegramError("getUpdates: HTTP 409 Conflict: terminated by other getUpdates request")
+
+        self.svc.api = Conflict()
+        self.svc._stop = threading.Event()
+        t = threading.Thread(target=self.svc._poll, daemon=True)
+        t.start()
+        for _ in range(50):
+            if self.svc.status == SHARED_BOT:
+                break
+            time.sleep(0.02)
+        self.svc._stop.set()
+        t.join(2)
+        self.assertEqual(self.svc.status, SHARED_BOT)
+
+    def test_new_pc_shows_its_pairing_code(self):
+        from unittest import mock
+
+        hints = []
+        self.svc.on_pairing_hint = hints.append
+        self.neko.settings.phone.telegram = True
+        self.neko.settings.privacy.allow_network = True
+
+        class Api(FakeApi):
+            def __init__(self, token):
+                super().__init__()
+
+            def me(self):
+                return {"username": "office_neko_bot"}
+
+            def get_updates(self, offset, wait_s=50):
+                time.sleep(0.05)
+                return []
+
+        with mock.patch("neko.phone.service.bot_token", return_value="1:x"), \
+                mock.patch("neko.phone.service.TelegramApi", Api):
+            self.svc.start()
+        self.addCleanup(self.svc.stop)
+        self.assertEqual(len(hints), 1)
+        self.assertIn(f"/pair {self.svc._pair_code}", hints[0])
+        self.assertIn("@office_neko_bot", hints[0])
+
+    def test_each_pc_keeps_its_own_pairing(self):
+        other = build_test_neko(temp_dir(), FakeProvider())   # a second PC = a different data folder
+        self.addCleanup(other.shutdown)
+        self.pair()
+        self.assertFalse(PhoneService(other).paired)
+        self.assertNotEqual(PhoneService(other).state.call_key, self.svc.state.call_key)
+
+
 class AudioTests(unittest.TestCase):
     def test_voice_note_round_trip(self):
         try:

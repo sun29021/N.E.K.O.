@@ -3,6 +3,22 @@
 All notable changes. Versions follow semantic versioning; database schema and
 config versions are tracked separately (see docs/DATABASE_SCHEMA.md).
 
+## [0.8.1] - 2026-10-28 - easy office install with its own phone
+
+### Added
+- Installer counts **every** NVIDIA GPU (2x 16 GB = 32 GB) and has a `desktop-32gb` plan: qwen3:32b,
+  gemma3:27b, qwen2.5-coder:32b across both cards (light plan when disk is short).
+- Installer asks for **this PC's own Telegram bot** (checked with Telegram, stored only in that PC's
+  secrets.toml, `[phone] telegram = true`); on first start the orb shows the pairing code by itself.
+- The laptop picks the office PC's **best** model for each job (`office_rank`), not just any office model.
+- Two PCs on one bot are detected (Telegram 409) and shown as "bot key used by another PC".
+
+### Fixed
+- The installer could replace a newer package with the older version on GitHub when connecting updates;
+  it now keeps the newer one and asks you to publish first.
+- Installer keeps keys saved earlier on that PC instead of overwriting secrets.toml.
+- Package builder also blocks `phone.json` and anything that looks like a Telegram bot key.
+
 ## [0.8.0] - 2026-10-28 - Neko on your phone, reminders, learned skills
 
 ### Added

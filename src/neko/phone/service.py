@@ -39,6 +39,7 @@ from .telegram import TelegramApi, TelegramError
 log = logging.getLogger("neko.phone")
 
 PAIR_MINUTES = 10
+SHARED_BOT = "bot key used by another PC - make a separate bot for this PC"
 PIN_LOCK_TRIES, PIN_LOCK_S = 5, 3600
 _DIGITS = re.compile(r"^\s*(\d{4,8})\s*$")
 _SCREEN = re.compile(r"\b(send|show|give)\b.{0,15}\b(screen|screenshot|desktop)\b|\bwhat'?s on my (pc|screen|laptop)\b"
@@ -119,6 +120,7 @@ class PhoneService:
         self._stop = threading.Event()
         self._threads: list[threading.Thread] = []
         self._battery_warned = False
+        self.on_pairing_hint: Any = None         # UI: show "send /pair 123456" when not paired yet
         self.approval_listeners: list[Any] = []  # e.g. the call page says "waiting for your approval"
         register_phone_tools(neko.tools, self)
         neko.coordinator.extensions.append(self.handle_command)
@@ -190,6 +192,12 @@ class PhoneService:
         for t in self._threads:
             t.start()
         self.status = "connected" if self.paired else "waiting for pairing"
+        if not self.paired:
+            # first start (e.g. right after installing on a new PC): show the pairing code by itself
+            code = self.begin_pairing()
+            if self.on_pairing_hint is not None:
+                self.on_pairing_hint(f"Pair your phone: in Telegram open @{self.bot_name} and send  /pair {code}"
+                                     f"  (valid {PAIR_MINUTES} minutes)")
         return f"Connected as @{self.bot_name}." + ("" if self.paired else " Now pair your phone.")
 
     def stop(self) -> None:
@@ -316,6 +324,14 @@ class PhoneService:
                 updates = api.get_updates(self.state.offset + 1 if self.state.offset else 0)
                 backoff = 3.0
             except TelegramError as exc:
+                if "HTTP 409" in str(exc):
+                    # another program (e.g. the Neko on your other PC) is reading this same bot: each PC
+                    # needs its own bot, or messages would go to a random one of them
+                    if self.status != SHARED_BOT:
+                        log.warning("telegram: this bot key is in use by another program/PC")
+                    self.status = SHARED_BOT
+                    stop.wait(60)
+                    continue
                 log.info("telegram poll: %s", exc)
                 self.status = "reconnecting"
                 stop.wait(backoff)

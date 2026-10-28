@@ -40,10 +40,10 @@ Details: neko\docs\INSTALL_OFFICE.md
 "@
 [IO.File]::WriteAllText("$Setup\README.txt", $readme, (New-Object Text.UTF8Encoding $false))
 # safety: the package must not contain personal data or keys
-$bad = Get-ChildItem -Recurse $Setup -File | Where-Object { $_.Name -match '^(secrets\.toml|config\.toml|neko\.db.*|.*\.lnk)$' }
+$bad = Get-ChildItem -Recurse $Setup -File | Where-Object { $_.Name -match '^(secrets\.toml|config\.toml|phone\.json|neko\.db.*|.*\.lnk)$' }
 if ($bad) { throw "personal files found in the package: $($bad.FullName -join ', ')" }
 $hits = Get-ChildItem -Recurse $Setup -File -Include *.py, *.toml, *.ps1, *.md, *.txt |
-    Select-String -Pattern 'gsk_[A-Za-z0-9]{20,}|AIza[0-9A-Za-z_\-]{30,}|AQ\.[A-Za-z0-9_\-]{30,}' |
+    Select-String -Pattern 'gsk_[A-Za-z0-9]{20,}|AIza[0-9A-Za-z_\-]{30,}|AQ\.[A-Za-z0-9_\-]{30,}|\b\d{8,10}:AA[A-Za-z0-9_\-]{30,}' |
     Where-Object { $_.Line -notmatch 'abcdefghijklmnop' }   # the redaction test's obvious fake key
 if ($hits) { throw "something that looks like an API key is in the package: $($hits.Path -join ', ')" }
 $zip = Join-Path $OutDir "NEKO-Setup.zip"

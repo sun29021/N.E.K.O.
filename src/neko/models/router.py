@@ -24,7 +24,7 @@ from ..core.types import Capability, TaskKind
 from ..database.db import Database
 from ..resources.monitor import ResourceSnapshot, assess
 from .base import ModelInfo, ModelProvider
-from .profiles import ModelProfile
+from .profiles import ModelProfile, office_rank
 
 ROLE_FOR_TASK: dict[TaskKind, str] = {
     TaskKind.SMALL_TALK: "fast",
@@ -214,7 +214,10 @@ class ModelRouter:
                     continue
             score = 1.0 - rank * 0.12 if name in prefs else 0.5
             if m.location == "lan:office" and role != "embedding":
-                score = 1.25  # your own bigger GPU: private, unlimited - preferred over cloud and the laptop
+                # your own bigger GPU: private, unlimited - preferred over cloud and the laptop; among the
+                # office's models, the best one for this job (qwen3:32b for chat, not its small qwen3:4b)
+                orank = office_rank(role, m.name)
+                score = 1.25 + (max(0.0, 0.06 - orank * 0.01) if orank is not None else -0.02)
             elif m.location.startswith("cloud:") and self.cloud_first and role != "embedding":
                 deep_pick = role in ("deep", "reasoning") and m.family == self.deep_cloud
                 score = 1.3 if deep_pick else (1.2 if m.family == "groq" else 1.1)
