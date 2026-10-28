@@ -1,0 +1,3 @@
+# NVIDIA CUDA 12 libraries for fast speech recognition on the GPU (~2 GB)
+nvidia-cublas-cu12>=12.9,<13
+nvidia-cudnn-cu12>=9.5,<10

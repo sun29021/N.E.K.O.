@@ -1,0 +1,19 @@
+# never upload: the Python environment, caches, builds, per-PC paths, personal data, keys
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+*.egg-info/
+neko-paths.json
+secrets.toml
+config.toml
+*.db
+*.db-wal
+*.db-shm
+*.log
+*.lnk
+.claude/

@@ -1,0 +1,182 @@
+"""Music: "Neko, play Blinding Lights" -> find it on YouTube and stream the audio in the background.
+
+* ``find_song``: YouTube search through the optional ``yt-dlp`` package. Nothing is downloaded to
+  disk; it only asks YouTube for the song's audio stream address.
+* The player itself lives in the desktop app (Qt Multimedia, ``ui/music_player.py``) and is plugged in
+  here as ``player``, so this package stays free of GUI imports.
+* Tools: ``play_music`` (verified: the player really reports playing) and ``music_control``
+  (pause / resume / stop / louder / quieter). Both need ``privacy.allow_network`` for streaming.
+
+Note: YouTube's terms only allow playback in their own apps; this is a personal-use convenience the
+owner asked for and it can stop working whenever YouTube changes its site.
+"""
+
+from __future__ import annotations
+
+import re
+import time
+from typing import Any, Protocol
+
+from ..core.errors import ToolError
+from ..core.types import RiskLevel
+from ..tools.base import ToolContext, ToolRegistry, ToolResult, ToolSpec
+
+
+class MusicPlayer(Protocol):
+    def play(self, url: str, title: str) -> None: ...
+    def control(self, action: str) -> None: ...
+    def status(self) -> dict[str, Any]: ...   # {"state": "playing"|"paused"|"loading"|"stopped"|"error", ...}
+
+
+player: MusicPlayer | None = None  # set by the desktop app
+
+MAX_SONG_SECONDS = 3 * 3600  # skip 10-hour loops and live streams
+
+
+_SONGISH = re.compile(r"\b(song|songs|music|official|audio|lyrics?|video song|full song|mv|remix|feat\.?|ft\.?)\b",
+                      re.IGNORECASE)
+_NOT_SONG = re.compile(r"\b(reaction|reacts?|reply|review|explained|tutorial|lesson|lecture|interview|podcast|"
+                       r"karaoke|how to|news|trailer|documentary|premiere)\b", re.IGNORECASE)
+
+
+def _song_score(e: dict[str, Any], rank: int) -> float:
+    """Prefer real songs: YouTube's Music category, song-like titles, normal song length."""
+    title = str(e.get("title") or "")
+    score = -rank * 0.6
+    if "Music" in (e.get("categories") or []):
+        score += 2.0
+    if _SONGISH.search(title):
+        score += 1.0
+    if _NOT_SONG.search(title):
+        score -= 2.5
+    dur = e.get("duration") or 0
+    if 90 <= dur <= 900:
+        score += 0.5
+    return score
+
+
+def find_songs(query: str, timeout_s: float = 20.0, n: int = 5) -> list[dict[str, Any]]:
+    """Playable YouTube matches, best song first: [{"title", "url", "page", "duration", "channel"}]."""
+    try:
+        import yt_dlp  # optional dependency
+    except ImportError as exc:
+        raise ToolError("playing from YouTube needs the 'yt-dlp' package (pip install yt-dlp)") from exc
+    search = query if _SONGISH.search(query) else f"{query} song"  # "oporadhi" -> "oporadhi song"
+    opts = {"format": "bestaudio[ext=m4a]/bestaudio", "noplaylist": True, "quiet": True, "no_warnings": True,
+            "skip_download": True, "default_search": f"ytsearch{n}", "socket_timeout": timeout_s,
+            "noprogress": True, "logger": _QuietLogger()}
+    try:
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(search, download=False)
+    except Exception as exc:  # noqa: BLE001 - yt-dlp raises many kinds
+        raise ToolError(f"YouTube search failed: {str(exc)[:160]}") from exc
+    entries = [e for e in (info.get("entries") or [info]) if e]
+    ok = [(i, e) for i, e in enumerate(entries)
+          if not e.get("is_live") and e.get("url") and (e.get("duration") or 0) <= MAX_SONG_SECONDS]
+    ok.sort(key=lambda ie: _song_score(ie[1], ie[0]), reverse=True)
+    songs = [{"title": str(e.get("title") or query), "url": e["url"], "page": e.get("webpage_url", ""),
+              "duration": int(e.get("duration") or 0), "channel": str(e.get("channel") or e.get("uploader") or "")}
+             for _i, e in ok]
+    if not songs:
+        raise ToolError(f"I couldn't find a playable song for \"{query}\" on YouTube")
+    return songs
+
+
+def find_song(query: str, timeout_s: float = 20.0) -> dict[str, Any]:
+    """Best YouTube match: {"title", "url" (audio stream), "page", "duration", "channel"}."""
+    return find_songs(query, timeout_s)[0]
+
+
+class _QuietLogger:
+    def debug(self, msg: str) -> None: ...
+    def info(self, msg: str) -> None: ...
+    def warning(self, msg: str) -> None: ...
+    def error(self, msg: str) -> None: ...
+
+
+def _wait_started(timeout_s: float = 9.0) -> tuple[bool, str]:
+    assert player is not None
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:  # streaming needs a moment to buffer
+        st = player.status()
+        if st.get("state") == "playing":
+            return True, ""
+        if st.get("state") == "error":
+            return False, str(st.get("error", "")) or "player error"
+        time.sleep(0.2)
+    return False, "didn't start in time"
+
+
+def _play(args: dict[str, Any], ctx: ToolContext) -> ToolResult:
+    if player is None:
+        return ToolResult(False, "music needs the desktop app (run 'python -m neko ui')")
+    songs = find_songs(args["query"])
+    problem = ""
+    for song in songs[:3]:  # seen live: a stream link occasionally fails ("Could not open file") - try the next
+        ctx.token.raise_if_cancelled()
+        player.play(song["url"], song["title"])
+        started, problem = _wait_started()
+        if started:
+            return ToolResult(True, f"Playing {song['title']}",
+                              {k: song[k] for k in ("title", "page", "duration", "channel")})
+    return ToolResult(False, f"found songs but none would play ({problem})")
+
+def _verify_play(args: dict[str, Any], result: ToolResult, ctx: ToolContext) -> tuple[bool, str]:
+    if player is None:
+        return False, "no player"
+    deadline = time.monotonic() + 10
+    while time.monotonic() < deadline:  # streaming needs a moment to buffer
+        st = player.status()
+        if st.get("state") == "playing":
+            return True, f"player is playing {st.get('title', '')}"
+        if st.get("state") == "error":
+            return False, f"player error: {st.get('error', '')}"
+        time.sleep(0.25)
+    return False, "the player didn't start within 10 s"
+
+
+CONTROLS = ("pause", "resume", "stop", "louder", "quieter")
+
+
+def _control(args: dict[str, Any], ctx: ToolContext) -> ToolResult:
+    if player is None:
+        return ToolResult(False, "music needs the desktop app")
+    action = args["action"]
+    if action not in CONTROLS:
+        return ToolResult(False, f"unknown music action {action}")
+    before = player.status()
+    if before.get("state") in (None, "stopped") and action != "stop":
+        return ToolResult(False, "nothing is playing right now")
+    player.control(action)
+    return ToolResult(True, f"Music: {action}", player.status())
+
+
+def _verify_control(args: dict[str, Any], result: ToolResult, ctx: ToolContext) -> tuple[bool, str]:
+    if player is None:
+        return False, "no player"
+    want = {"pause": "paused", "resume": "playing", "stop": "stopped"}.get(args["action"])
+    deadline = time.monotonic() + 3
+    while want and time.monotonic() < deadline:
+        if player.status().get("state") == want:
+            return True, f"player is {want}"
+        time.sleep(0.1)
+    return (True, "volume changed") if not want else (False, f"player did not become {want}")
+
+
+def register_media_tools(registry: ToolRegistry) -> None:
+    registry.register(ToolSpec(
+        name="play_music", description="Find a song on YouTube and play its audio in the background.",
+        params={"query": {"type": "string", "required": True, "max_length": 200,
+                          "description": "song and/or artist"}},
+        handler=_play, risk=RiskLevel.LOW, category="media", side_effects="plays audio",
+        needs_network=True, verifier=_verify_play, timeout_s=45,
+    ))
+    registry.register(ToolSpec(
+        name="music_control", description="Pause, resume, stop, or change the volume of the music.",
+        params={"action": {"type": "string", "required": True, "enum": list(CONTROLS)}},
+        handler=_control, risk=RiskLevel.LOW, category="media", side_effects="changes music playback",
+        verifier=_verify_control, timeout_s=10,
+    ))
+
+
+__all__ = ["CONTROLS", "MusicPlayer", "find_song", "player", "register_media_tools"]

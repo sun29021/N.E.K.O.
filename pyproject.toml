@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "neko-assistant"
+version = "0.7.0"
+description = "N.E.K.O. (Neuro Electric Knowledge Operator): a local-first, privacy-conscious AI companion and Windows command center."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11,<3.15"
+authors = [{ name = "N.E.K.O. project owner" }]
+# The core engine (config, database, memory, routing, policy, tools, Ollama
+# gateway) uses only the Python standard library. Everything else is optional.
+dependencies = []
+
+[project.optional-dependencies]
+# Desktop HUD and command center.
+ui = ["PySide6==6.12.0"]
+# Push-to-talk speech recognition + audio capture.
+voice = [
+    "faster-whisper==1.2.1",
+    "sounddevice==0.5.2",
+    "numpy>=1.26,<3",
+    "kokoro-onnx==0.4.9",   # natural local voice (Kokoro-82M, Apache-2.0)
+    "soundfile>=0.12",
+]
+# Optional wake word (pre-trained models are CC BY-NC-SA 4.0: personal/non-commercial use).
+wakeword = ["openwakeword==0.6.0", "onnxruntime>=1.18,<2"]
+# Developer tooling.
+# Reading PDFs (study notes, "what's this file?").
+docs = ["pypdf>=5,<7"]
+# "Play <song>": YouTube search + audio stream address (played by Qt Multimedia).
+media = ["yt-dlp>=2026.10"]
+# Natural online voices (Microsoft neural voices: English + native Bangla, female/male).
+voice-online = ["edge-tts>=7.3,<8"]
+# Speech recognition on an NVIDIA GPU (CUDA 12 libraries for faster-whisper, ~2 GB).
+gpu-voice = ["nvidia-cublas-cu12==12.9.2.10", "nvidia-cudnn-cu12>=9.5,<10"]
+dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.10"]
+
+[project.scripts]
+neko = "neko.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+neko = ["database/migrations/*.sql", "configuration/defaults.toml"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM"]
+ignore = ["S101", "S603", "S607"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+warn_unused_ignores = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

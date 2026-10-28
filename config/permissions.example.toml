@@ -1,0 +1,21 @@
+# Reference: how N.E.K.O. decides what it may do. The live policy is code
+# (src\neko\security\policy.py) so that model output can never edit it.
+#
+# Level 0  read-only       allowed (inside tools.allowed_roots only)
+# Level 1  low, reversible allowed and logged; needs approval if untrusted content is in context
+# Level 2  material change approval each time, unless a narrow standing rule covers it
+# Level 3  high impact     fresh approval every time; can never be pre-approved
+# Prohibited               never, even with approval (e.g. deleting files)
+#
+# Built-in tools and their levels:
+#   list_dir, read_text_file, search_files, system_status, list_models   -> 0
+#   write_note (new file)                                                 -> 1
+#   write_note (overwrite, backup kept)                                   -> 2
+#   open_app (allow-listed apps only, needs computer_control_enabled)     -> 1
+#   move_file                                                             -> 2
+#   run_approved_script (only files inside tools.approved_scripts_dir)    -> 2
+#   delete_files                                                          -> prohibited
+#
+# Standing rules (Level 2 only) are created from Python or the future UI, e.g.
+#   policy.add_standing_rule("move_file", {"path_prefix": "D:\\Downloads\\Sort"}, risk=2, days=30)
+# They must have a scope, expire, and are listed in the Activity > Audit log.

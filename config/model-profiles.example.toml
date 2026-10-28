@@ -1,0 +1,28 @@
+# Reference copy of the built-in model profiles (the live definitions are in
+# src\neko\models\profiles.py). Each role lists models in order of preference;
+# the router only uses models that are installed AND fit in free memory.
+# Sizes = Ollama download sizes checked 2026-10-27. Verify before downloading.
+
+[existing-only]          # 0 GB to download - uses what is already in D:\Ollama\models
+fast      = ["llama3.2:3b"]
+chat      = ["llama3.2:3b"]
+reasoning = ["llama3.2:3b"]
+coding    = ["llama3.2:3b"]
+vision    = []
+embedding = []
+
+[laptop-lite]            # RTX 3050 4 GB + 16 GB RAM.  Optional downloads, total ~6-8 GB
+fast      = ["qwen3:1.7b", "llama3.2:3b"]                       # qwen3:1.7b 1.4 GB
+chat      = ["llama3.2:3b", "qwen3:4b"]                         # qwen3:4b 2.5 GB
+reasoning = ["qwen3:4b", "llama3.2:3b"]
+coding    = ["qwen2.5-coder:1.5b", "qwen3:4b", "llama3.2:3b"]   # 986 MB
+vision    = ["gemma3:4b", "qwen2.5vl:3b"]                       # 3.4 GB / 3.2 GB (partial GPU offload)
+embedding = ["nomic-embed-text", "bge-m3"]                      # ~0.3 GB / ~1.2 GB (bge-m3 is multilingual)
+
+[desktop-16gb]           # OPTIONAL second computer (unverified hardware), via LAN
+fast      = ["qwen3:4b"]
+chat      = ["qwen3:8b", "qwen3:4b"]                            # 5.2 GB
+reasoning = ["qwen3:14b", "qwen3:8b"]                           # 9.3 GB
+coding    = ["qwen2.5-coder:7b", "qwen2.5-coder:14b"]           # 4.7 / 9.0 GB
+vision    = ["gemma3:12b", "qwen2.5vl:7b"]                      # 8.2 / 6.0 GB
+embedding = ["bge-m3", "nomic-embed-text"]

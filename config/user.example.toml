@@ -1,0 +1,39 @@
+# N.E.K.O. user configuration
+# setup.ps1 copies this to %LOCALAPPDATA%\NEKO\config.toml (outside the project,
+# so your settings are never shared by accident). Only include what you change;
+# everything else comes from src\neko\configuration\defaults.toml.
+# Check it any time with:  .venv\Scripts\python -m neko config-check
+
+config_version = 1
+
+[app]
+user_name = ""
+verbosity = "balanced"            # brief | balanced | detailed
+language = "en"                   # "bn" to prefer Bangla replies when you write in Bangla
+
+[models]
+# "existing-only" uses only llama3.2:3b, which is already on this computer (no downloads).
+# Switch to "laptop-lite" after you add optional models from docs\MODEL_GUIDE.md.
+profile = "existing-only"
+num_ctx = 4096
+
+[voice]
+enabled = false                   # speak replies aloud
+tts_engine = "sapi"               # built into Windows, no download
+stt_model = "small"
+stt_language = "en"
+
+[tools]
+computer_control_enabled = false  # allow opening apps from the list below
+allowed_roots = []                # e.g. ["D:\\PROJECT", "D:\\Notes"]  (double backslashes!)
+writable_roots = []               # e.g. ["D:\\Notes"]
+
+[tools.allowed_apps]               # full paths only; %SystemRoot% etc. are expanded
+notepad = "%SystemRoot%\\System32\\notepad.exe"
+calculator = "%SystemRoot%\\System32\\calc.exe"
+explorer = "%SystemRoot%\\explorer.exe"
+# vscode = "C:\\Users\\<you>\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"
+
+[ui]
+reduced_motion = false
+always_on_top = true
