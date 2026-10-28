@@ -50,7 +50,8 @@ _OWNER_ONLY = re.compile(r"\b(upgrade|improve|update|modify|reprogram)\s+(yourse
                          r"\bself[- ]upgrade\b|\b(undo|revert|roll ?back)\b.{0,20}\b(upgrade|update)\b|"
                          r"\b(publish|push)\b.{0,25}\bupdate\b|^\W*(restart|reboot)\s+(yourself|neko)\b|"
                          r"\balways allow\b|\b(learn (how )?to (use|run|open)|add my program|register)\b|"
-                         r"\b(forget|remove)\s+(my\s+)?(program|app)\b|\bpair\b", re.I)
+                         r"\b(forget|remove)\s+(my\s+)?(program|app)\b|\bpair\b|"
+                         r"\b(office|other|desktop)\s+(pc|computer)\b", re.I)  # the PC link is owner-only
 EVERYDAY_HELP = ("I'm Neko on this phone too. Chat with me by text or voice, play music, set reminders, ask me to "
                  "open or run things on the PC. Anything risky is approved by the owner on their phone.")
 _SAVE_ONLY = re.compile(r"^\W*(save|keep|store)\b(?!.*\b(summar|explain|read|notes?|study|what)\b)", re.I)
@@ -76,6 +77,7 @@ class PhoneState:
     announce_back: bool = False   # restarted on request: say "I'm back" when connected again
     # everyday phones: chat, music, reminders, programs... Anything risky they ask for is approved by the owner.
     everyday: list[dict[str, Any]] = field(default_factory=list)   # [{"id", "name", "conv"}]
+    link_key: str = ""            # lets your other PC's Neko use this one (phone/link.py)
 
     @classmethod
     def load(cls, path: Path) -> PhoneState:
@@ -96,7 +98,8 @@ def hash_pin(pin: str, salt: str) -> str:
     return hashlib.pbkdf2_hmac("sha256", pin.encode(), bytes.fromhex(salt), 200_000).hex()
 
 
-def bot_token(data_dir: Path) -> str:
+def secret(data_dir: Path, name: str) -> str:
+    """A key you saved in secrets.toml (never logged)."""
     from ..models.cloud import secrets_path
 
     try:
@@ -105,7 +108,11 @@ def bot_token(data_dir: Path) -> str:
         data = tomllib.loads(secrets_path(data_dir).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return ""
-    return str((data.get("cloud") or {}).get("telegram_bot_token", "")).strip()
+    return str((data.get("cloud") or {}).get(name, "")).strip()
+
+
+def bot_token(data_dir: Path) -> str:
+    return secret(data_dir, "telegram_bot_token")
 
 
 # ====================================================================== the service
@@ -630,4 +637,4 @@ def register_phone_tools(registry: ToolRegistry, service: PhoneService) -> None:
     ))
 
 
-__all__ = ["PhoneService", "PhoneState", "bot_token", "hash_pin"]
+__all__ = ["PhoneService", "PhoneState", "bot_token", "hash_pin", "secret"]

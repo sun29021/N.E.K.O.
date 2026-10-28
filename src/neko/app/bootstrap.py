@@ -159,4 +159,7 @@ def build(settings: Settings | None = None, *, db_path: str | None = None, conso
     from .. import programs
 
     programs.attach(neko)  # your own programs in D:\PROJECT: "learn to use X", "run X" (approval per run)
+    from ..phone.link import attach_client
+
+    attach_client(neko)  # "on the office PC, ...", "compare with the office PC" (after you connect a link code)
     return neko

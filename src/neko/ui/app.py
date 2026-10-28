@@ -202,7 +202,7 @@ class Controller:
             self.neko.routines.start()
         if self.neko.settings.phone.telegram:
             threading.Thread(target=self.phone.start, daemon=True, name="neko-phone-start").start()
-        if self.neko.settings.phone.calls:
+        if self.neko.settings.phone.calls or self.calls.link.enabled:
             self.calls.start()
 
     def _autoplay_next(self) -> None:

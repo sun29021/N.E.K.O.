@@ -247,7 +247,8 @@ class RoleTests(Base):
 
     def test_owner_only_commands_are_refused(self):
         for text in ("upgrade yourself so you can fly", "publish the update", "undo the last upgrade",
-                     "restart yourself", "always allow traid", "learn to use traid"):
+                     "restart yourself", "always allow traid", "learn to use traid",
+                     "on the office PC, run Print SOFT"):
             self.svc._handle(msg(STRANGER, text)["message"])
             self.assertIn("Only", self.api.sent[-1][1], text)
 

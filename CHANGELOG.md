@@ -3,6 +3,27 @@
 All notable changes. Versions follow semantic versioning; database schema and
 config versions are tracked separately (see docs/DATABASE_SCHEMA.md).
 
+## [0.10.0] - 2026-10-28 - your programs, owner/everyday phones, the PC link
+
+### Added
+- **Your own programs** (`programs.py`): "what programs do I have?", "learn to use Traid" (finds the real
+  launcher / newest build / npm web script in D:\PROJECT - never installers or build tools - reads its README
+  or docstring without running it, asks once), "run Traid with --report daily" (output back), "start HISAB"
+  (background; web apps open in the browser when ready), "stop HISAB", "always allow Traid" (an approved,
+  narrow 30-day rule), "learn to use D:\PROJECT\...\file.exe" for an exact file.
+- **Owner and everyday phones**: one owner phone (approvals, PIN, upgrades, publishing, programs setup, the
+  PC link) plus everyday phones for day-to-day use. Risky things an everyday phone asks for are approved on
+  the owner's phone; replies, voice notes, screenshots and reminders go back to the phone that asked.
+- **Link between your PCs** (`phone/link.py`): "what can the office PC do that you can't?" (versions,
+  abilities, programs, skills, models - with what to do about each), "on the office PC, run Print SOFT"
+  (approved by that PC's owner), "get / send the skill X from / to the office PC". Memories stay separate.
+  Its own random key, served only on 127.0.0.1 and shared inside your tailnet; link codes must point to
+  *.ts.net.
+
+### Fixed
+- "on the office PC, publish the update" is sent to that PC instead of being treated as a local command.
+
+
 ## [0.9.0] - 2026-10-28 - upgrade and teach her from your phone
 
 ### Added

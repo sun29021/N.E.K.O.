@@ -48,6 +48,17 @@ Send exactly that from the office phone. She answers "Paired!" and from then on 
 account can talk to her. Then set an **approval PIN**: Command Center > Phone > 3. Approval PIN.
 (Code expired? Command Center > Phone > Pair my phone.)
 
+## 4b. Owner and everyday phones on the office PC
+The first phone paired is the **owner** - pair YOUR phone first (send the /pair code from your own
+Telegram to the office bot). Then Command Center > Phone > **Pair an everyday phone** for the person who
+uses that PC: they chat, play music, set reminders and run things; anything risky they ask for comes to your
+phone for approval, and they can't upgrade or publish.
+
+## 4c. Link it with your laptop
+On the office PC: Command Center > Phone > **Let my other PC connect** (needs Tailscale) - copy the code.
+On the laptop: Command Center > Phone > **Connect to my other PC** - paste it. Then ask the laptop:
+"what can the office PC do that you can't?" or "on the office PC, run Print SOFT".
+
 ## 5. Optional extras on the office PC
 - **Live calls from its phone**: install Tailscale on the office PC and on that phone (same Tailscale
   account), then Command Center > Phone > **Turn on calls** > Send call link to my phone.

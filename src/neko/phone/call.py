@@ -67,13 +67,16 @@ class CallServer:
         self._bad: list[float] = []
         self._turn_lock = threading.Lock()
         service.approval_listeners.append(self._approval_notice)
+        from .link import LinkServer
+
+        self.link = LinkServer(neko, service)   # /link/* for your other PC (own key)
 
     # ------------------------------------------------------------------ lifecycle
     def start(self) -> str:
         if self._httpd is not None:
             return "running"
-        if not self.neko.settings.phone.calls:
-            return "Calls are switched off."
+        if not (self.neko.settings.phone.calls or self.link.enabled):
+            return "Calls and the PC link are switched off."
         port = self.neko.settings.phone.call_port
         try:
             self._httpd = ThreadingHTTPServer(("127.0.0.1", port), self._handler_class())
@@ -220,15 +223,20 @@ class CallServer:
                     self._send(404, b"not found", "text/plain")
 
             def do_POST(self) -> None:  # noqa: N802
-                if not server.authorized(self.headers.get("X-Neko-Key", "")):
-                    self._send(403, b"forbidden", "text/plain")
-                    return
+                route = self.path.split("?")[0]
                 size = int(self.headers.get("Content-Length") or 0)
                 if size > MAX_UPLOAD:
                     self._send(413, b"too large", "text/plain")
                     return
+                if route.startswith("/link/"):   # your other PC: its own key, never the call key
+                    body = self.rfile.read(size) if size else b""
+                    code, data = server.link.handle(route, self.headers.get("X-Neko-Link", ""), body)
+                    self._send(code, json.dumps(data).encode("utf-8"), "application/json")
+                    return
+                if not server.neko.settings.phone.calls or not server.authorized(self.headers.get("X-Neko-Key", "")):
+                    self._send(403, b"forbidden", "text/plain")
+                    return
                 body = self.rfile.read(size) if size else b""
-                route = self.path.split("?")[0]
                 if route == "/api/ping":
                     self._send(200, b'{"ok":true}', "application/json")
                 elif route == "/api/stop":

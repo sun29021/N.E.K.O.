@@ -282,6 +282,18 @@ class Routines:
         return (f"Saved the skill \"{name}\" ({len(steps)} step{'s' if len(steps) != 1 else ''}):\n{listing}\n"
                 f"Say \"do the {name}\" any time.", "happy")
 
+    def store_skill(self, name: str, steps: list[dict[str, Any]]) -> None:
+        """Save a skill (e.g. one shared by your other PC). Replays still go through the permission policy."""
+        clean = [{"tool": str(s["tool"]), "args": s.get("args") or {}, "say": str(s.get("say", s["tool"]))[:120]}
+                 for s in steps if isinstance(s, dict) and s.get("tool")]
+        self.db.execute("INSERT INTO skills(id, name, steps_json, created_at) VALUES (?,?,?,?) "
+                        "ON CONFLICT(name) DO UPDATE SET steps_json=excluded.steps_json, created_at=excluded.created_at",
+                        (new_id("sk_"), name.lower()[:60], json.dumps(clean), time.time()))
+
+    def find_skill(self, name: str) -> Any | None:
+        best = max(((_score(name, s["name"]), s) for s in self.skills()), default=None, key=lambda x: x[0])
+        return best[1] if best and best[0] >= 0.8 else None
+
     def skills(self) -> list[Any]:
         return self.db.query("SELECT * FROM skills ORDER BY name")
 

@@ -111,6 +111,19 @@ class PhoneTab(QWidget):
         self.call_info.setWordWrap(True)
         form.addRow("4. Live calls", _row(self.call_info, self.call_btn, send_link))
 
+        # 5. Link between your PCs
+        allow = QPushButton("Let my other PC connect")
+        allow.setToolTip("Makes a link code (address + private key) so your other PC's Neko can use this one. "
+                         "Shared only inside your Tailscale network.")
+        allow.clicked.connect(self._allow_link)
+        connect_other = QPushButton("Connect to my other PC")
+        connect_other.setToolTip("Paste the link code from the other PC.")
+        connect_other.clicked.connect(self._connect_link)
+        self.link_info = QLineEdit()
+        self.link_info.setReadOnly(True)
+        self.link_info.setPlaceholderText("link code appears here")
+        form.addRow("5. My other PC", _row(self.link_info, allow, connect_other))
+
         # Options
         self.voice = QComboBox()
         self.voice.addItems(["auto", "always", "never"])
@@ -258,6 +271,55 @@ class PhoneTab(QWidget):
         sent = self.phone.notify(f"Tap to call me (keep this link private):\n{link}")
         QMessageBox.information(self, "Calls", "Sent to your phone in Telegram." if sent else
                                 "Telegram isn't connected - finish steps 1-2 first.")
+
+    def _allow_link(self) -> None:
+        s = self.neko.settings
+        if QMessageBox.question(
+                self, "Let your other PC connect?",
+                "Your other PC's Neko will be able to ask this Neko to do things (risky ones still need YOUR approval "
+                "here or on your owner phone), compare features and share skills. Memories are not shared. Only "
+                "devices in your own Tailscale network can reach it, and only with the code. Continue?") != \
+                QMessageBox.StandardButton.Yes:
+            return
+        self.calls.link.new_key()
+        if not self._save({"link_server": True}):
+            return
+        if not s.phone.calls:   # the call page's local server is shared by Tailscale with the same script
+            args = ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(SCRIPT), "-Enable",
+                    "-Port", str(s.phone.call_port), "-HttpsPort", str(s.phone.call_https_port)]
+            cp = subprocess.run(args, capture_output=True, text=True, timeout=60, shell=False,
+                                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+            if cp.returncode != 0:
+                QMessageBox.warning(self, "Link", (cp.stdout or cp.stderr or "Tailscale refused.").strip()[:400])
+                return
+        self.calls.start()
+        code = self.calls.link.code()
+        self.link_info.setText(code)
+        QMessageBox.information(self, "Link code", "Copy the code in the box (select it, Ctrl+C) and paste it on "
+                                                   "your other PC: Command Center > Phone > Connect to my other PC.\n"
+                                                   "Making a new code switches the old one off." if code else
+                                "Tailscale isn't running here, so there's no address yet.")
+
+    def _connect_link(self) -> None:
+        from PySide6.QtWidgets import QInputDialog
+
+        from ..models.cloud import save_keys
+        from ..phone.link import LinkClient, parse_code
+
+        code, ok = QInputDialog.getText(self, "Connect to my other PC", "Paste the link code:")
+        if not ok or not code.strip():
+            return
+        try:
+            url, key = parse_code(code)
+            info = LinkClient(url, key, timeout_s=20).call("/link/info")
+        except Exception as exc:  # noqa: BLE001 - shown to you
+            QMessageBox.warning(self, "Not connected", getattr(exc, "user_message", str(exc)))
+            return
+        save_keys(self.neko.settings.data_dir, {"link_key": key})
+        if self._save({"link_url": url}):
+            self.link_info.setText(f"Connected to {info.get('name')} (version {info.get('version')})")
+            QMessageBox.information(self, "Connected", f"Connected to {info.get('name')}. Try: \"what can the office "
+                                                       "PC do that you can't?\" or \"on the office PC, ...\"")
 
     def _save_options(self) -> None:
         if self._save({"voice_replies": self.voice.currentText(), "notify_long_jobs": self.jobs.isChecked(),

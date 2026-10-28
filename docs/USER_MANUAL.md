@@ -8,6 +8,16 @@
 - **She vanished?** After 4 quiet minutes the orb fades away, but she is still listening. Say "Neko"
   (or a request) and she reappears. Change the delay with `ui.idle_hide_seconds` (0 = never hide).
 
+## 00000. New in 0.10 - your programs, more phones, both PCs together
+- **Your programs** (in D:\PROJECT): "what programs do I have?", "learn to use Traid", "run Traid", "start
+  HISAB" (opens in the browser), "stop HISAB", "always allow Traid". Each run asks first unless you said
+  "always allow". For buttons inside an app: ask her to click them, then "save that as ...".
+- **Everyday phones**: Command Center > Phone > "Pair an everyday phone" - for someone who uses the PC day to
+  day. Anything risky they ask for comes to YOUR phone to approve; they can't upgrade or publish.
+- **Both PCs**: on the office PC, Command Center > Phone > "Let my other PC connect"; paste the code on the
+  laptop under "Connect to my other PC". Then: "what can the office PC do that you can't?", "on the office
+  PC, run Print SOFT", "get the skill X from the office PC".
+
 ## 0000. New in 0.9 - upgrade and teach her (also from Telegram)
 - **"Upgrade yourself so you can ..."** - Claude Code makes the change after you approve; she runs all her
   tests and keeps it only if they pass (otherwise she undoes it herself). Then **"restart yourself"**.

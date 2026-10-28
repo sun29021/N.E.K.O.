@@ -37,6 +37,11 @@ PC: the phone is only a remote control and a microphone/speaker.
    - Tap the link on the phone, allow the microphone, tap **Call**. Tip: "Add to Home screen" makes it an
      app icon. The link contains your private call key - don't share it.
 
+## Owner and everyday phones (0.10)
+- The first phone you pair is the **owner** (approvals, PIN, upgrades, publishing, programs setup, the PC
+  link). **Pair an everyday phone** adds day-to-day phones: their risky requests come to the owner's phone.
+- **Unpair all** removes the owner and every everyday phone.
+
 ## Safety - what protects you
 - Only your paired chat is answered; anyone else who finds the bot gets no reply at all. Group chats are
   ignored. Pairing codes work once and expire after 10 minutes.

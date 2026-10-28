@@ -49,6 +49,12 @@ runs inside a checkpoint and is kept only if the full self-test passes, otherwis
 Publishing to other PCs is Level 3 and refused unless the GitHub repo is confirmed private. Learned facts
 from files/links are stored as *observed*, scanned for injection wording and never executed.
 
+**Programs and the PC link (0.10):** your programs run only from the projects folder (argument lists, no
+shell strings, timeouts, never as administrator); adding one and each run need approval unless you approved a
+narrow "always allow" rule for that one program. The PC link uses its own random key (separate from the call
+key), local-only server shared inside your tailnet, and every request is handled - and approved - by the PC
+that runs it. Everyday phones can never approve, type a PIN or use the link.
+
 ## 5. Prompt-injection defence
 - Untrusted content is wrapped in `BEGIN UNTRUSTED <random tag> … END UNTRUSTED <tag>`. Look-alike
   markers inside the content are neutralised, and the system prompt tells the model it is data.

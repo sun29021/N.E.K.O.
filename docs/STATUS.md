@@ -244,6 +244,14 @@ with your keys (RAM question via tool 1.2 s; your exact Hisab sentence summarise
 - Not yet run live: a real Claude Code self-upgrade through the checkpoint, `learn this` with the real models.
 
 
+## 6u. 0.10.0 - programs, phone roles, PC link
+- Verified 2026-10-28: 302 tests OK (programs in a temp projects folder incl. background start/stop and the
+  always-allow rule; owner/everyday roles incl. everyday can't approve or type a PIN; two Nekos linked over
+  loopback: compare, remote request with the other PC's approvals, skills both ways, wrong/old keys refused).
+- Read-only check of the real D:\PROJECT: launchers/newest builds picked, installers and gradlew skipped.
+- Not yet live: the link between the real laptop and office PC (office not installed yet).
+
+
 ## 7. PC crashes on 2026-10-27 (investigated read-only)
 | Time | Bug check | Meaning |
 |---|---|---|

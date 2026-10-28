@@ -131,6 +131,8 @@ call_https_port = 8443     # the https port Tailscale serves it on inside your t
 voice_replies = "auto"     # auto | always | never
 notify_long_jobs = true
 notify_battery = true
+link_server = false        # Command Center > Phone > "Let my other PC connect"
+link_url = ""              # Command Center > Phone > "Connect to my other PC"
 
 [remote]
 enabled = false
