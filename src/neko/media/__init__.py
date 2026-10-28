@@ -14,6 +14,7 @@ owner asked for and it can stop working whenever YouTube changes its site.
 from __future__ import annotations
 
 import re
+import threading
 import time
 from collections.abc import Callable
 from typing import Any, Protocol
@@ -78,11 +79,110 @@ def find_songs(query: str, timeout_s: float = 20.0, n: int = 5) -> list[dict[str
           if not e.get("is_live") and e.get("url") and (e.get("duration") or 0) <= MAX_SONG_SECONDS]
     ok.sort(key=lambda ie: _song_score(ie[1], ie[0]), reverse=True)
     songs = [{"title": str(e.get("title") or query), "url": e["url"], "page": e.get("webpage_url", ""),
-              "duration": int(e.get("duration") or 0), "channel": str(e.get("channel") or e.get("uploader") or "")}
+              "duration": int(e.get("duration") or 0), "channel": str(e.get("channel") or e.get("uploader") or ""),
+              "id": str(e.get("id") or "")}
              for _i, e in ok]
     if not songs:
         raise ToolError(f"I couldn't find a playable song for \"{query}\" on YouTube")
     return songs
+
+
+# ---------------------------------------------------------------------- up next (like YouTube's autoplay)
+_queue: list[dict[str, Any]] = []     # songs to play next: {"id", "title", "duration"}
+_played: list[str] = []               # video ids already played this session (no repeats)
+_current: dict[str, Any] = {}
+_qlock = threading.Lock()
+
+
+def related_songs(video_id: str, timeout_s: float = 20.0, n: int = 25) -> list[dict[str, Any]]:
+    """YouTube's own mix for a song ("Up next"), without the song itself or anything already played."""
+    try:
+        import yt_dlp
+    except ImportError as exc:
+        raise ToolError("playing from YouTube needs the 'yt-dlp' package (pip install yt-dlp)") from exc
+    opts = {"extract_flat": "in_playlist", "playlistend": n, "quiet": True, "no_warnings": True,
+            "skip_download": True, "socket_timeout": timeout_s, "logger": _QuietLogger()}
+    url = f"https://www.youtube.com/watch?v={video_id}&list=RD{video_id}"
+    try:
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+    except Exception as exc:  # noqa: BLE001
+        raise ToolError(f"couldn't get the next songs: {str(exc)[:160]}") from exc
+    out = []
+    for e in info.get("entries") or []:
+        vid, title, dur = str(e.get("id") or ""), str(e.get("title") or ""), int(e.get("duration") or 0)
+        if (not vid or vid == video_id or vid in _played or e.get("live_status") == "is_live"
+                or _NOT_SONG.search(title) or dur > 900):
+            continue
+        out.append({"id": vid, "title": title, "duration": dur})
+    return out
+
+
+def _stream(video_id: str, timeout_s: float = 20.0) -> dict[str, Any]:
+    """Audio stream for one YouTube video id, in the same shape as find_songs() results."""
+    import yt_dlp
+
+    opts = {"format": "bestaudio[ext=m4a]/bestaudio", "noplaylist": True, "quiet": True, "no_warnings": True,
+            "skip_download": True, "socket_timeout": timeout_s, "logger": _QuietLogger()}
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        e = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
+    return {"title": str(e.get("title") or ""), "url": e["url"], "page": e.get("webpage_url", ""),
+            "duration": int(e.get("duration") or 0), "channel": str(e.get("channel") or e.get("uploader") or ""),
+            "id": video_id}
+
+
+def _now_playing(song: dict[str, Any]) -> None:
+    """Remember the song and line up what comes after it, in the background."""
+    global _current
+    _current = song
+    if song.get("id"):
+        _played.append(song["id"])
+        del _played[:-200]
+
+        def fill(vid: str = song["id"]) -> None:
+            try:
+                songs = related_songs(vid)
+            except ToolError:
+                return
+            with _qlock:
+                if _current.get("id") == vid:  # still the same song
+                    _queue[:] = songs
+
+        threading.Thread(target=fill, daemon=True, name="neko-up-next").start()
+
+
+def has_up_next() -> bool:
+    return bool(_queue or _current.get("id"))
+
+
+def _next(args: dict[str, Any], ctx: ToolContext) -> ToolResult:
+    if player is None:
+        return ToolResult(False, "music needs the desktop app (run 'python -m neko ui')")
+    with _qlock:
+        if not _queue and _current.get("id"):
+            _queue[:] = related_songs(_current["id"])  # asked before the background list arrived
+        upcoming = list(_queue)
+    if not upcoming:
+        return ToolResult(False, "there's no song lined up - tell me what to play")
+    fixed = prepare_sound() if prepare_sound is not None else ""
+    problem = ""
+    for item in upcoming[:3]:
+        ctx.token.raise_if_cancelled()
+        with _qlock:
+            if item in _queue:
+                _queue.remove(item)
+        try:
+            song = _stream(item["id"])
+        except Exception as exc:  # noqa: BLE001 - unavailable / region-blocked: try the next one
+            problem = str(exc)[:120]
+            continue
+        player.play(song["url"], song["title"])
+        started, problem = _wait_started()
+        if started:
+            _now_playing(song)
+            return ToolResult(True, f"Playing {song['title']}",
+                              {**{k: song[k] for k in ("title", "page", "duration", "channel")}, "fixed_sound": fixed})
+    return ToolResult(False, f"the next songs wouldn't play ({problem})")
 
 
 def find_song(query: str, timeout_s: float = 20.0) -> dict[str, Any]:
@@ -122,6 +222,7 @@ def _play(args: dict[str, Any], ctx: ToolContext) -> ToolResult:
         player.play(song["url"], song["title"])
         started, problem = _wait_started()
         if started:
+            _now_playing(song)
             return ToolResult(True, f"Playing {song['title']}",
                               {**{k: song[k] for k in ("title", "page", "duration", "channel")}, "fixed_sound": fixed})
     return ToolResult(False, f"found songs but none would play ({problem})")
@@ -177,6 +278,11 @@ def register_media_tools(registry: ToolRegistry) -> None:
         needs_network=True, verifier=_verify_play, timeout_s=45,
     ))
     registry.register(ToolSpec(
+        name="play_next_song", description="Skip to the next song (YouTube's 'Up next' for the current song).",
+        params={}, handler=_next, risk=RiskLevel.LOW, category="media", side_effects="plays audio",
+        needs_network=True, verifier=_verify_play, timeout_s=60,
+    ))
+    registry.register(ToolSpec(
         name="music_control", description="Pause, resume, stop, or change the volume of the music.",
         params={"action": {"type": "string", "required": True, "enum": list(CONTROLS)}},
         handler=_control, risk=RiskLevel.LOW, category="media", side_effects="changes music playback",
@@ -184,4 +290,4 @@ def register_media_tools(registry: ToolRegistry) -> None:
     ))
 
 
-__all__ = ["CONTROLS", "MusicPlayer", "find_song", "player", "register_media_tools"]
+__all__ = ["CONTROLS", "MusicPlayer", "find_song", "has_up_next", "player", "register_media_tools", "related_songs"]

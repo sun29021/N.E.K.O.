@@ -49,7 +49,7 @@ def music_shortcut(text: str) -> str | None:
     if low in _SOUNDS_LIKE_PAUSE:
         return "pause"
     action, _ = music_request(low)
-    return low if action in ("pause", "resume", "stop", "louder", "quieter") else None
+    return low if action in ("pause", "resume", "stop", "louder", "quieter", "next") else None
 
 
 class VoiceController(QObject):

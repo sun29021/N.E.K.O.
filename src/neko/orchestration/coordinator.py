@@ -186,7 +186,7 @@ class Coordinator:
         pc = pc_command(text) if not images else None
         upgrade = upgrade_request(text)
         vcmd = voice_command(text) if not images else None
-        if music not in ("play", "ask") and music and not _music_loaded():
+        if music not in ("play", "ask") and music and not _music_loaded() and not (music == "next" and media.has_up_next()):
             music = ""  # "turn it up" with no music playing is ordinary conversation
         is_doc, wants_study, doc_path = document_request(text)
         doc_text = text
@@ -335,7 +335,8 @@ class Coordinator:
             return ("Playing from YouTube needs internet, and my internet access is off. To turn it on: double-click "
                     "my orb, open Settings, tick \"Allow internet\" and press Save settings.", "caring")
         ctx = ToolContext(token=token, paths=self.paths, task_id=task.id, settings=self.s, tainted=False)
-        tool, args = ("play_music", {"query": song}) if action == "play" else ("music_control", {"action": action})
+        tool, args = (("play_music", {"query": song}) if action == "play" else ("play_next_song", {}) if action == "next"
+                      else ("music_control", {"action": action}))
         self._state(AssistantState.TOOL, f"finding {song} on YouTube" if action == "play" else f"music: {action}")
         self.bus.publish(ev.TOOL_CALL, task_id=task.id, tool=tool, status="requested")
         res = self.executor.run(tool, args, ctx)
@@ -351,7 +352,7 @@ class Coordinator:
                     f"({res.summary.split('(', 1)[-1].rstrip(')')})"), "sad"
         if not res.ok:
             return f"Sorry, I couldn't do that: {res.summary}.", "sad"
-        if action == "play":
+        if action in ("play", "next"):
             title = (res.data or {}).get("title", song)
             if res.verified is False:
                 return f"I found \"{title}\" but it didn't start playing ({res.verification}).", "sad"

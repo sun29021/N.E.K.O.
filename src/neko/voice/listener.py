@@ -87,7 +87,7 @@ EARLY_END_QUESTION_S = 0.6
 EARLY_END_SENTENCE_S = 0.9
 REVISE_WINDOW_S = 2.0  # speech starting this soon after an early end continues the same request
 MUSIC_WINDOW_S = 4.0  # while music plays: short chunks, so "pause" is heard within about a second
-MUSIC_HOTWORDS = "Neko, pause, stop, resume, louder, quieter, turn it up, turn it down"
+MUSIC_HOTWORDS = "Neko, pause, stop, resume, next, skip, louder, quieter, turn it up, turn it down"
 
 
 class EnergyVAD:

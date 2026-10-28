@@ -3,6 +3,18 @@
 All notable changes. Versions follow semantic versioning; database schema and
 config versions are tracked separately (see docs/DATABASE_SCHEMA.md).
 
+## [0.8.3] - 2026-10-28 - "play next" like YouTube
+
+### Added
+- **Up next**: after a song starts she fetches YouTube's own mix for it in the background. "play next",
+  "next", "skip", "another song" play the next one (by voice during music without her name, or from the
+  phone). When a song ends by itself the next one starts (`ui.music_autoplay`, on by default; "stop the
+  music" ends it). No repeats within a session. Checked live: 24 related songs in ~1 s, next stream ~2 s.
+
+### Fixed
+- "play next" searched YouTube for a song called "next"; "next song" pressed the media key, which Neko's own
+  player ignores.
+
 ## [0.8.2] - 2026-10-28 - music you can actually hear
 
 ### Fixed

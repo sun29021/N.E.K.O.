@@ -17,6 +17,9 @@
   **"save that as monthly sheet"**. Next time: **"do the monthly sheet"**. "What skills do you know?",
   "forget the skill monthly sheet". Each step still asks for approval when it needs it.
 - From the phone: "send me my screen", "is my laptop on?", "lock my PC", "play music on the PC".
+- **Music like YouTube**: "play next" / "skip" plays YouTube's next song, and when a song ends the next one
+  starts by itself ("stop the music" ends it; turn off with `ui.music_autoplay = false`). If the PC is muted,
+  she unmutes it first.
 
 ## 00. New in 0.7
 - **Natural voice** with subtitles that appear word by word as she speaks.

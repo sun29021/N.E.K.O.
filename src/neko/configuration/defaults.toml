@@ -94,6 +94,7 @@ retain_screenshots = false
 auto_screen_context = true     # "what's the problem on this thing?" -> she looks at your screen (not saved)
 
 [ui]
+music_autoplay = true      # when a song ends, play YouTube's "up next" song
 theme = "aurum"                # aurum (golden holographic) | nebula (cyan/violet)
 style = "orb"                  # orb = just the floating holographic orb | panel = orb + text panel
 reduced_motion = false

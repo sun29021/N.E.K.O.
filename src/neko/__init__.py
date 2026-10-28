@@ -4,6 +4,6 @@ A local-first, modular personal AI assistant for Windows. The core package has
 no third-party dependencies; UI, voice and vision features are optional extras.
 """
 
-__version__ = "0.8.2"
+__version__ = "0.8.3"
 APP_NAME = "N.E.K.O."
 APP_FULL_NAME = "Neuro Electric Knowledge Operator"

@@ -233,6 +233,11 @@ with your keys (RAM question via tool 1.2 s; your exact Hisab sentence summarise
   PC was muted at 0 % (read with the new `speaker_state`). Fixed: music unmutes / raises volume first.
   268 tests OK; the real speakers stayed untouched during the test run (checked before and after).
 
+## 6s. 0.8.3 - up next / autoplay
+- Verified 2026-10-28: 269 tests OK; live YouTube mix fetch (24 songs, ~1 s) and next-song stream (~2 s).
+  Autoplay on song end is wired to the Qt player's EndOfMedia; not yet heard end-to-end on the real PC.
+
+
 ## 7. PC crashes on 2026-10-27 (investigated read-only)
 | Time | Bug check | Meaning |
 |---|---|---|

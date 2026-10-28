@@ -26,6 +26,7 @@ class MusicPlayer(QObject):
     _duck_req = Signal(bool)
     now_playing = Signal(str)            # title ("" when stopped) - for the orb's caption
     state_changed = Signal(str)          # playing / paused / loading / stopped / error
+    finished = Signal()                  # a song played to its end (not stopped by you): autoplay the next
 
     def __init__(self, volume: float = 0.6) -> None:
         super().__init__()
@@ -110,6 +111,7 @@ class MusicPlayer(QObject):
         if ms == QMediaPlayer.MediaStatus.EndOfMedia:
             self._set(state="stopped", title="")
             self.now_playing.emit("")
+            self.finished.emit()
 
     def _on_error(self, _err: QMediaPlayer.Error, msg: str) -> None:
         self._set(state="error", error=msg[:200])

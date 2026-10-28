@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import sys
 import threading
 import time
@@ -45,6 +46,8 @@ def make_icon() -> QIcon:
     p.drawEllipse(QPointF(32, 32), 28, 28)
     p.end()
     return QIcon(pm)
+
+log = logging.getLogger("neko.ui")
 
 
 class FirstRunDialog(QDialog):
@@ -125,6 +128,7 @@ class Controller:
         from ..tools.pc import make_audible
 
         media.prepare_sound = make_audible  # music you ask for should be heard (unmute / volume 0)
+        self.music.finished.connect(self._autoplay_next)
         self.music.now_playing.connect(lambda t: self.hud.setText(f"♪ {t}") if t else None)
         self.music.state_changed.connect(lambda st: setattr(self.hud, "music_state", st))
         self.voice: Any = None
@@ -195,6 +199,25 @@ class Controller:
             threading.Thread(target=self.phone.start, daemon=True, name="neko-phone-start").start()
         if self.neko.settings.phone.calls:
             self.calls.start()
+
+    def _autoplay_next(self) -> None:
+        """A song ended by itself: play YouTube's next one, like YouTube does ("stop the music" ends it)."""
+        from .. import media
+
+        s = self.neko.settings
+        if not (s.ui.music_autoplay and s.privacy.allow_network and media.has_up_next()):
+            return
+
+        def run() -> None:
+            from ..core.cancel import CancelToken
+            from ..tools.base import ToolContext
+
+            ctx = ToolContext(token=CancelToken(timeout_s=90), paths=self.neko.paths, settings=s)
+            res = self.neko.executor.run("play_next_song", {}, ctx)
+            if not res.ok:
+                log.info("autoplay stopped: %s", res.summary)
+
+        threading.Thread(target=run, daemon=True, name="neko-autoplay").start()
 
     def _show_hint(self, text: str) -> None:
         self.show_hud()

@@ -196,6 +196,10 @@ def is_long_job(text: str) -> bool:
 
 
 _MUSIC_CTRL = [
+    # first, so "play next" never searches YouTube for a song called "next"
+    ("next", re.compile(r"^\W*(?:(?:hey|ok|neko|please)\W+)*(?:play\s+(?:the\s+)?next(?:\s+(?:one|song|track))?|"
+                        r"next(?:\s+(?:one|song|track))?|skip(?:\s+(?:it|this|this one|this song|the song))?|"
+                        r"(?:change|another)\s+(?:the\s+)?song)(?:\s+please)?\W*$", re.I)),
     ("pause", re.compile(r"\b(pause|hold)\b.{0,15}\b(music|song|it|that|playback)\b|^\s*pause\s*[.!]?\s*$", re.I)),
     ("resume", re.compile(r"\b(resume|continue|unpause)\b.{0,15}\b(music|song|it|playing)\b|"
                           r"^\s*(resume|unpause)\s*[.!]?\s*$|\bplay (it )?again\b", re.I)),

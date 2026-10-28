@@ -130,6 +130,7 @@ class VisionSection:
 
 @dataclass
 class UISection:
+    music_autoplay: bool = True        # when a song ends, play YouTube's next one ("stop the music" ends it)
     theme: str = "aurum"
     style: str = "orb"                 # orb (just the holographic orb) | panel (orb + text panel)
     reduced_motion: bool = False

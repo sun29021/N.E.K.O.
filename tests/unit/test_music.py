@@ -124,6 +124,30 @@ class RoutingTests(unittest.TestCase):
         self.assertIn("Playing Believer", r.text)
         self.assertIn("Your sound was off, so I unmuted", r.text)
 
+    def test_play_next_from_youtube_up_next(self):
+        import time as _t
+
+        for name in ("related_songs", "_stream", "_current"):
+            self.addCleanup(setattr, media, name, getattr(media, name))
+        self.addCleanup(media._queue.clear)
+        self.addCleanup(media._played.clear)
+        media._queue.clear()
+        media._played.clear()
+        media.find_songs = lambda q, timeout_s=20.0, n=5: [{"title": "Casa (Official)", "url": "https://x/1.m4a",
+                                                           "page": "p", "duration": 200, "channel": "c", "id": "v1"}]
+        media.related_songs = lambda vid, timeout_s=20.0, n=25: [
+            {"id": x, "title": f"Song {x}", "duration": 200} for x in ("v2", "v3") if x not in media._played]
+        media._stream = lambda vid, timeout_s=20.0: {"title": f"Song {vid}", "url": f"https://x/{vid}.m4a", "page": "",
+                                                    "duration": 200, "channel": "c", "id": vid}
+        n = build_test_neko(temp_dir(), FakeProvider(), privacy={"allow_network": True})
+        self.addCleanup(n.shutdown)
+        self.assertIn("Casa", n.coordinator.handle("play casa casa").text)
+        _t.sleep(0.2)  # the up-next list is fetched in the background
+        self.assertEqual(n.coordinator.handle("play next").text, "Playing Song v2.")
+        self.assertEqual(self.player.calls[-1], ("play", "https://x/v2.m4a"))
+        self.assertEqual(n.coordinator.handle("skip").text, "Playing Song v3.")
+        self.player.state = "stopped"          # the song ended by itself: "next" still works (autoplay path)
+        self.assertTrue(media.has_up_next())
     def test_tests_never_touch_the_real_speakers(self):
         self.assertIsNone(media.prepare_sound)  # only the desktop app plugs it in
     def test_volume_words_are_chat_when_nothing_plays(self):
