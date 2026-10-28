@@ -252,6 +252,12 @@ with your keys (RAM question via tool 1.2 s; your exact Hisab sentence summarise
 - Not yet live: the link between the real laptop and office PC (office not installed yet).
 
 
+## 6v. 0.10.1 - guides + owner-only approvals
+- 303 tests OK (new: PC requests go to the owner's phone only with the setting on and the phone reachable).
+  Approval window checked offscreen: Approve disabled ('Owner approves on their phone'), Deny works.
+- docs/guides: 3 PDFs (9 + 15 + 10 pages), every page checked as an image.
+
+
 ## 7. PC crashes on 2026-10-27 (investigated read-only)
 | Time | Bug check | Meaning |
 |---|---|---|

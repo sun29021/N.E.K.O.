@@ -169,6 +169,9 @@ class PhoneSection:
     voice_replies: str = "auto"        # auto = a voice note back when you sent one; always; never
     notify_long_jobs: bool = True      # "done: ..." on the phone when a long PC job finishes
     notify_battery: bool = True        # "battery at 15%" on the phone
+    # Only the owner's phone can approve: the PC's own approval window can deny but not approve (e.g. the office
+    # PC, where someone else sits at the screen). Needs a paired, connected owner phone; otherwise the PC approves.
+    owner_approves_all: bool = False
     link_server: bool = False          # let your other PC's Neko use this one (phone/link.py)
     link_url: str = ""                 # the other PC to use (from its link code; the key is in secrets.toml)
 

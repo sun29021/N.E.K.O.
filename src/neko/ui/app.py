@@ -583,7 +583,8 @@ class Controller:
 
     def _on_approval(self, req: Any) -> None:
         parent = self.cc if self.cc.isVisible() else None
-        dlg = ApprovalDialog(req, parent)
+        owner_only = hasattr(self, "phone") and self.phone.owner_only
+        dlg = ApprovalDialog(req, parent, approve_here=not owner_only)
         dlg.show()
         dlg.raise_()
         dlg.activateWindow()

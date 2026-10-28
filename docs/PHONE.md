@@ -41,6 +41,8 @@ PC: the phone is only a remote control and a microphone/speaker.
 - The first phone you pair is the **owner** (approvals, PIN, upgrades, publishing, programs setup, the PC
   link). **Pair an everyday phone** adds day-to-day phones: their risky requests come to the owner's phone.
 - **Unpair all** removes the owner and every everyday phone.
+- **Only my (owner) phone can approve** (Approvals, then Save options): the approval window on that PC can only deny;
+  approvals come to the owner's phone. Use it on the office PC.
 
 ## Safety - what protects you
 - Only your paired chat is answered; anyone else who finds the bot gets no reply at all. Group chats are

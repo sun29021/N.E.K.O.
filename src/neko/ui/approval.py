@@ -39,7 +39,8 @@ _RISK_TEXT = {
 
 
 class ApprovalDialog(QDialog):
-    def __init__(self, req: ApprovalRequest, parent: QWidget | None = None, timeout_s: int = 280) -> None:
+    def __init__(self, req: ApprovalRequest, parent: QWidget | None = None, timeout_s: int = 280,
+                 approve_here: bool = True) -> None:
         super().__init__(parent)
         self.req = req
         self.setWindowTitle("N.E.K.O. needs your approval")
@@ -93,6 +94,13 @@ class ApprovalDialog(QDialog):
 
         self.approve_btn.setEnabled(req.risk < RiskLevel.HIGH)
         self.confirm.toggled.connect(self.approve_btn.setEnabled)
+        if not approve_here:   # phone.owner_approves_all: only the owner's phone can say yes; anyone can say no
+            self.confirm.setVisible(False)
+            self.approve_btn.setEnabled(False)
+            self.approve_btn.setText("Owner approves on their phone")
+            waiting = QLabel("Waiting for the owner to approve this on their phone. You can still Deny it here.")
+            waiting.setWordWrap(True)
+            lay.insertWidget(lay.count() - 1, waiting)
         self.deny_btn.clicked.connect(self.reject)
         self.approve_btn.clicked.connect(self.accept)
         self.deny_btn.setFocus()

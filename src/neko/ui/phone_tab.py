@@ -136,6 +136,11 @@ class PhoneTab(QWidget):
         self.batt = QCheckBox("Warn my phone when the PC battery is low")
         self.batt.setChecked(s.phone.notify_battery)
         form.addRow("", self.batt)
+        self.owner_only = QCheckBox("Only my (owner) phone can approve - the window on this PC can only deny")
+        self.owner_only.setToolTip("Good for a PC someone else uses every day (e.g. the office). Works while your "
+                                   "phone is paired and Telegram is connected; otherwise this PC approves as usual.")
+        self.owner_only.setChecked(s.phone.owner_approves_all)
+        form.addRow("Approvals", self.owner_only)
         save = QPushButton("Save options")
         save.clicked.connect(self._save_options)
         form.addRow("", save)
@@ -323,5 +328,5 @@ class PhoneTab(QWidget):
 
     def _save_options(self) -> None:
         if self._save({"voice_replies": self.voice.currentText(), "notify_long_jobs": self.jobs.isChecked(),
-                       "notify_battery": self.batt.isChecked()}):
+                       "notify_battery": self.batt.isChecked(), "owner_approves_all": self.owner_only.isChecked()}):
             self.status.setText("Options saved.")

@@ -3,6 +3,17 @@
 All notable changes. Versions follow semantic versioning; database schema and
 config versions are tracked separately (see docs/DATABASE_SCHEMA.md).
 
+## [0.10.1] - 2026-10-28 - printable guides, owner-only approvals
+
+### Added
+- Three illustrated PDF guides for people new to AI (`docs/guides`): installing N.E.K.O., the owner's manual
+  for the laptop, and the everyday guide for the office PC. Rebuild them with
+  `.venv\Scripts\python scripts\guides\make_guides.py` (Qt's web engine, offline, no browser).
+- `phone.owner_approves_all` (Command Center > Phone > Approvals): only the owner's phone can approve - the
+  approval window on that PC can only deny. For a PC someone else uses every day. Falls back to the PC window
+  whenever the owner's phone isn't paired and connected.
+
+
 ## [0.10.0] - 2026-10-28 - your programs, owner/everyday phones, the PC link
 
 ### Added

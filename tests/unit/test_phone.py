@@ -147,6 +147,17 @@ class ApprovalTests(Base):
         self.assertFalse(req2.decided)
         self.assertIn("Too many", self.api.answers[-1])
 
+    def test_owner_only_sends_pc_requests_to_the_phone(self):
+        req = ApprovalRequest(tool="t", risk=RiskLevel.MATERIAL, summary="x", args={}, side_effects="", reversible=True)
+        self.svc.approval_handler(req)                       # asked at the PC, setting off
+        self.assertEqual(self.api.sent, [])
+        self.neko.settings.phone.owner_approves_all = True
+        self.assertTrue(self.svc.owner_only)
+        self.svc.approval_handler(req)                       # setting on: the owner's phone gets the buttons
+        self.assertEqual(self.api.sent[-1][0], OWNER)
+        self.assertTrue(self.api.sent[-1][2])
+        self.svc.api = None                                  # phone unreachable: the PC approves as usual
+        self.assertFalse(self.svc.owner_only)
     def test_first_answer_wins(self):
         req = self.request(RiskLevel.MATERIAL)
         req.resolve(False)                                     # denied at the PC first

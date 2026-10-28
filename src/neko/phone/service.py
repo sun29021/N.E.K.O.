@@ -155,6 +155,11 @@ class PhoneService:
     def running(self) -> bool:
         return self.api is not None and not self._stop.is_set()
 
+    @property
+    def owner_only(self) -> bool:
+        """Approvals only from the owner's phone (the setting is on AND that phone can actually be reached)."""
+        return bool(self.s.phone.owner_approves_all) and self.paired and self.running
+
     def begin_pairing(self, role: str = "owner") -> str:
         """role "owner" (approvals, upgrades, PIN) or "everyday" (day-to-day use; needs a paired owner)."""
         self._pair_code = f"{secrets.randbelow(1_000_000):06d}"
@@ -268,8 +273,9 @@ class PhoneService:
 
     # ------------------------------------------------------------------ approvals
     def approval_handler(self, req: ApprovalRequest) -> None:
-        """Installed next to the PC dialog. Only requests that came from the phone go to the phone."""
-        if origin.current() != origin.PHONE:
+        """Installed next to the PC dialog. Requests from the phone go to the phone - and, with
+        phone.owner_approves_all, requests made at the PC too."""
+        if origin.current() != origin.PHONE and not self.owner_only:
             return
         for listener in self.approval_listeners:
             listener(req)
