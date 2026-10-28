@@ -20,11 +20,16 @@ def current() -> str:
     return getattr(_local, "origin", "")
 
 
+def detail() -> str:
+    """Which phone chat asked (Telegram chat id as text), '' when not known."""
+    return getattr(_local, "detail", "")
+
+
 @contextmanager
-def from_origin(origin: str) -> Iterator[None]:
-    previous = current()
-    _local.origin = origin
+def from_origin(origin: str, who: str = "") -> Iterator[None]:
+    previous, previous_who = current(), detail()
+    _local.origin, _local.detail = origin, who
     try:
         yield
     finally:
-        _local.origin = previous
+        _local.origin, _local.detail = previous, previous_who

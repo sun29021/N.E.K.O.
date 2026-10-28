@@ -74,14 +74,24 @@ class PhoneTab(QWidget):
 
         # 2. Pairing
         pair = QPushButton("Pair my phone")
+        pair.setToolTip("Your own phone = the owner: approvals, upgrades, PIN.")
         pair.clicked.connect(self._pair)
-        unpair = QPushButton("Unpair")
+        unpair = QPushButton("Unpair all")
         unpair.clicked.connect(self._unpair)
         self.pair_info = QLabel()
         self.pair_info.setWordWrap(True)
         self.pair_info.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
 
         form.addRow("2. Pairing", _row(self.pair_info, pair, unpair))
+        add_day = QPushButton("Pair an everyday phone")
+        add_day.setToolTip("Someone else's phone for day-to-day use: chat, music, reminders, running things. "
+                           "Anything risky they ask for is approved on YOUR phone. No upgrades.")
+        add_day.clicked.connect(lambda: self._pair("everyday"))
+        drop_day = QPushButton("Remove everyday phones")
+        drop_day.clicked.connect(self._drop_everyday)
+        self.day_info = QLabel()
+        self.day_info.setWordWrap(True)
+        form.addRow("", _row(self.day_info, add_day, drop_day))
 
         # 3. PIN
         self.pin = QLineEdit()
@@ -144,13 +154,18 @@ class PhoneTab(QWidget):
         who = f", paired with {p.state.owner_name or 'your phone'}" if p.paired else ", not paired yet"
         self.status.setText(f"Telegram: {p.status}{bot}{who if p.running else ''}  |  "
                             f"Calls: {'on' if s.phone.calls else 'off'}")
-        if p.paired:
-            self.pair_info.setText(f"Paired with {p.state.owner_name or 'your phone'}.")
-        elif p._pair_code and time.time() < p._pair_until:
-            self.pair_info.setText(f"In Telegram, open @{p.bot_name} and send:  /pair {p._pair_code}  "
-                                   f"(valid {max(1, int((p._pair_until - time.time()) // 60))} more min)")
+        pending = p._pair_code and time.time() < p._pair_until
+        code_text = (f"In Telegram, open @{p.bot_name} and send:  /pair {p._pair_code}  "
+                     f"(valid {max(1, int((p._pair_until - time.time()) // 60))} more min)") if pending else ""
+        if pending and p._pair_role == "owner":
+            self.pair_info.setText(code_text)
+        elif p.paired:
+            self.pair_info.setText(f"Owner: {p.state.owner_name or 'your phone'}.")
         else:
             self.pair_info.setText("Not paired - click Pair my phone.")
+        names = ", ".join(e.get("name") or "phone" for e in p.state.everyday)
+        self.day_info.setText(f"From the everyday phone: {code_text}" if pending and p._pair_role == "everyday" else
+                              f"Everyday phones: {names}" if names else "No everyday phones.")
         self.call_btn.setText("Turn off calls" if s.phone.calls else "Turn on calls")
         self.call_info.setText("Your phone needs the free Tailscale app, signed in to your account." if not
                                s.phone.calls else "On - send yourself the link, then tap it on the phone.")
@@ -174,16 +189,24 @@ class PhoneTab(QWidget):
         self.status.setText("Connecting...")
         threading.Thread(target=lambda: self.message.emit(self.phone.start()), daemon=True).start()
 
-    def _pair(self) -> None:
+    def _pair(self, role: str = "owner") -> None:
         if not self.phone.running:
             QMessageBox.information(self, "Connect first", "Save the bot key and connect (step 1) first.")
             return
-        code = self.phone.begin_pairing()
-        self.pair_info.setText(f"In Telegram, open @{self.phone.bot_name} and send:  /pair {code}  "
-                               "(valid 10 minutes)")
+        if role == "everyday" and not self.phone.paired:
+            QMessageBox.information(self, "Owner first", "Pair your own phone first - it approves what everyday "
+                                                         "phones ask for.")
+            return
+        self.phone.begin_pairing(role)
+        self._refresh()
+
+    def _drop_everyday(self) -> None:
+        n = self.phone.remove_everyday()
+        self.status.setText(f"Removed {n} everyday phone{'s' if n != 1 else ''}.")
+        self._refresh()
 
     def _unpair(self) -> None:
-        if QMessageBox.question(self, "Unpair?", "Stop answering your current phone?") == \
+        if QMessageBox.question(self, "Unpair?", "Stop answering your phone AND every everyday phone?") == \
                 QMessageBox.StandardButton.Yes:
             self.phone.unpair()
             self._refresh()

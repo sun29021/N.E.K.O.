@@ -228,6 +228,51 @@ class CallPageTests(Base):
         self.assertEqual(self.calls._httpd.server_address[0], "127.0.0.1")
 
 
+class RoleTests(Base):
+    def setUp(self):
+        super().setUp()
+        self.pair()                                     # OWNER
+        code = self.svc.begin_pairing("everyday")
+        self.svc._dispatch(msg(STRANGER, f"/pair {code}"))
+        self.api.sent.clear()
+
+    def test_everyday_phone_is_paired_and_owner_told(self):
+        self.assertIsNotNone(self.svc.everyday_chat(STRANGER))
+        self.assertEqual(self.svc.state.owner_chat_id, OWNER)      # the owner did not change
+
+    def test_everyday_replies_go_back_to_that_phone(self):
+        self.svc._handle(msg(STRANGER, "hello")["message"])
+        self.assertEqual(self.api.sent[-1][0], STRANGER)
+        self.assertNotEqual(self.svc._conversation(STRANGER), self.svc._conversation(OWNER))
+
+    def test_owner_only_commands_are_refused(self):
+        for text in ("upgrade yourself so you can fly", "publish the update", "undo the last upgrade",
+                     "restart yourself", "always allow traid", "learn to use traid"):
+            self.svc._handle(msg(STRANGER, text)["message"])
+            self.assertIn("Only", self.api.sent[-1][1], text)
+
+    def test_risky_requests_from_everyday_go_to_the_owner(self):
+        req = ApprovalRequest(tool="t", risk=RiskLevel.MATERIAL, summary="move a file", args={}, side_effects="",
+                              reversible=True)
+        self.neko.policy.pending[req.id] = req
+        with origin.from_origin(origin.PHONE, str(STRANGER)):
+            self.svc.approval_handler(req)
+        to_owner = [s for s in self.api.sent if s[0] == OWNER]
+        self.assertTrue(to_owner and to_owner[-1][2])               # buttons on the owner's phone
+        self.assertIn("asked for this", to_owner[-1][1])
+        self.assertTrue(any(s[0] == STRANGER and "OK" in s[1] for s in self.api.sent))
+        self.svc._on_button({"id": "x", "data": f"ap:{req.id}:y", "message": {"chat": {"id": STRANGER}}})
+        self.assertFalse(req.decided)                               # an everyday phone can't approve
+        self.svc._dispatch(msg(STRANGER, "1234"))
+        self.assertFalse(req.decided)                               # ...or type a PIN
+
+    def test_everyday_needs_an_owner_and_unpair_removes_all(self):
+        self.svc.unpair()
+        self.assertEqual(self.svc.state.everyday, [])
+        self.svc.begin_pairing("everyday")
+        self.assertEqual(self.svc._pair_role, "owner")              # the first phone is always the owner
+
+
 class TwoPcTests(Base):
     def test_same_bot_on_two_pcs_is_reported(self):
         import threading

@@ -156,4 +156,7 @@ def build(settings: Settings | None = None, *, db_path: str | None = None, conso
     from .. import selfupdate
 
     selfupdate.attach(neko)  # "restart yourself", "undo the last upgrade", "publish the update" (with approval)
+    from .. import programs
+
+    programs.attach(neko)  # your own programs in D:\PROJECT: "learn to use X", "run X" (approval per run)
     return neko

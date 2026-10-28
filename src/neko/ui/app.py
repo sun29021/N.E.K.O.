@@ -239,7 +239,9 @@ class Controller:
             self.tray.showMessage("N.E.K.O. reminder", text)
         if self.voice is not None and self.neko.settings.voice.enabled:
             self.voice.speak(f"Hey, a reminder: {r.get('text', '')}.", "calm", queue=True)
-        threading.Thread(target=self.phone.notify, args=(text,), daemon=True).start()
+        who = str(r.get("origin") or "")
+        chat = int(who.split(":", 1)[1]) if who.startswith("phone:") and who.split(":", 1)[1].isdigit() else None
+        threading.Thread(target=self.phone.notify, args=(text, chat), daemon=True).start()
 
     def set_always_listen(self, on: bool) -> None:
         if self.voice is None:

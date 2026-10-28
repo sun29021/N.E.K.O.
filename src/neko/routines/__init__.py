@@ -197,7 +197,8 @@ class Routines:
         if due <= datetime.now() - timedelta(seconds=5):
             return "That time has already passed - when should I remind you?", "curious"
         self.db.execute("INSERT INTO reminders(id, due_at, text, created_at, origin) VALUES (?,?,?,?,?)",
-                        (new_id("rm_"), due.timestamp(), what[:300], time.time(), origin.current()))
+                        (new_id("rm_"), due.timestamp(), what[:300], time.time(),
+                         origin.current() + (f":{origin.detail()}" if origin.detail() else "")))
         return f"Okay, I'll remind you to {what} {_when(due)}.", "happy"
 
     def pending_reminders(self) -> list[Any]:
@@ -224,7 +225,7 @@ class Routines:
         for r in rows:
             self.db.execute("UPDATE reminders SET done_at=? WHERE id=?", (now, r["id"]))
             late = now - r["due_at"] > 120
-            out.append({"id": r["id"], "text": r["text"], "late": late,
+            out.append({"id": r["id"], "text": r["text"], "late": late, "origin": r["origin"],
                         "due": datetime.fromtimestamp(r["due_at"]).strftime("%I:%M %p").lstrip("0")})
         return out
 
