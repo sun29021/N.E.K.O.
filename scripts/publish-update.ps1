@@ -21,9 +21,9 @@ try {
     if ($LASTEXITCODE -ne 0) { Write-Host "Tests fail - not publishing." -ForegroundColor Red; exit 1 }
     git add -A
     $files = git diff --cached --name-only
-    $bad = $files | Where-Object { $_ -match '(^|/)(\.venv|secrets\.toml|config\.toml|neko-paths\.json)|\.db$|\.lnk$' }
+    $bad = $files | Where-Object { $_ -match '(^|/)(\.venv|secrets\.toml|config\.toml|neko-paths\.json|phone\.json)|\.db$|\.lnk$' }
     if ($bad) { Write-Host "Personal files staged - not publishing: $bad" -ForegroundColor Red; git reset -q; exit 1 }
-    $keys = git grep --cached -n -E 'gsk_[A-Za-z0-9]{20,}|AIza[0-9A-Za-z_-]{30,}|AQ\.[A-Za-z0-9_-]{30,}' |
+    $keys = git grep --cached -n -E 'gsk_[A-Za-z0-9]{20,}|AIza[0-9A-Za-z_-]{30,}|AQ\.[A-Za-z0-9_-]{30,}|[0-9]{8,10}:AA[A-Za-z0-9_-]{30,}' |
         Where-Object { $_ -notmatch 'abcdefghijklmnop' }
     if ($keys) { Write-Host "Something that looks like an API key is in the code - not publishing:`n$keys" -ForegroundColor Red; git reset -q; exit 1 }
     if ($files) {

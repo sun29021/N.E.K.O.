@@ -3,6 +3,29 @@
 All notable changes. Versions follow semantic versioning; database schema and
 config versions are tracked separately (see docs/DATABASE_SCHEMA.md).
 
+## [0.9.0] - 2026-10-28 - upgrade and teach her from your phone
+
+### Added
+- **Safe self-upgrades** (`selfupdate.py`): "upgrade yourself so you can ..." now runs as a transaction -
+  checkpoint (refuses with unsaved changes), Claude Code makes the change (your approval, also on the phone),
+  N.E.K.O. re-runs the full self-test herself, then keeps it as a "Self-upgrade:" commit or puts everything
+  back exactly as it was.
+- "**restart yourself**" (she says "I'm back, version X" on the phone afterwards), "**undo the last upgrade**"
+  (Level 2; skips upgrades already undone; tests again, gives up cleanly on conflicts), "**publish the
+  update**" (Level 3 - asks every time, PIN on the phone; refuses unless GitHub confirms the repo is private;
+  verified against GitHub afterwards).
+- "**learn this**" for a message, a file (also a Telegram file captioned "learn this") or a web link: the
+  model extracts short facts from the fenced text; facts that look like instructions or mention passwords/
+  keys are dropped; the rest is stored as *observed* memory tagged with its source. "forget what you learned
+  from <source>" removes them.
+
+### Safety
+- Tests never run Git against N.E.K.O.'s real folder (`upgrade_transaction` is replaced in test helpers).
+- publish-update.ps1 also refuses `phone.json` and anything that looks like a Telegram bot key.
+
+### Docs
+- Office PC corrected to one RTX 5060 Ti 16 GB (desktop-16gb plan).
+
 ## [0.8.3] - 2026-10-28 - "play next" like YouTube
 
 ### Added

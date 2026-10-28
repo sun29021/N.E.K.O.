@@ -124,4 +124,6 @@ def build_test_neko(tmp: Path, provider: FakeProvider | None = None, **overrides
     neko.monitor = FakeMonitor()
     neko.coordinator.monitor = neko.monitor
     neko.coordinator.explorer = lambda: []  # never ask the real File Explorer from tests
+    # never checkpoint / reset / commit N.E.K.O.'s real Git folder from a test: just run the change
+    neko.coordinator.upgrade_transaction = lambda request, change, root: (change(), ("kept", "test"))[1]
     return neko

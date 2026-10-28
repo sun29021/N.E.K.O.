@@ -8,6 +8,15 @@
 - **She vanished?** After 4 quiet minutes the orb fades away, but she is still listening. Say "Neko"
   (or a request) and she reappears. Change the delay with `ui.idle_hide_seconds` (0 = never hide).
 
+## 0000. New in 0.9 - upgrade and teach her (also from Telegram)
+- **"Upgrade yourself so you can ..."** - Claude Code makes the change after you approve; she runs all her
+  tests and keeps it only if they pass (otherwise she undoes it herself). Then **"restart yourself"**.
+  Changed your mind? **"undo the last upgrade"**. Send it to the office PC: **"publish the update"** (asks
+  every time; on the phone it needs your PIN).
+- **"Learn this: ..."** with text, a file path, a link - or send a file on Telegram with the caption
+  "learn this". She keeps the key facts in her memory (Command Center > Memory) and uses them in answers.
+  **"Forget what you learned from <name>"** removes them.
+
 ## 000. New in 0.8 - Neko on your phone
 - **Telegram chat** (text, voice notes, photos, files) and **live calls** from your phone - set up in
   Command Center > Phone, step by step in docs/PHONE.md. Risky actions ask you on the phone.

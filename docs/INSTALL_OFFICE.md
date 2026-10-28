@@ -1,8 +1,8 @@
 # Installing N.E.K.O. on another PC (e.g. the office desktop)
 
-Office PC: MSI with **2x RTX 5060 Ti 16 GB** (32 GB of GPU memory), Ryzen 7 7800X3D, 32 GB RAM.
-The installer detects all of this itself, counts **both** graphics cards and picks the biggest models
-that fit (`desktop-32gb`: qwen3:32b, gemma3:27b, qwen2.5-coder:32b spread over both cards).
+Office PC: MSI with **one RTX 5060 Ti 16 GB**, Ryzen 7 7800X3D, 32 GB DDR5 RAM. The installer detects this
+itself and picks the `desktop-16gb` plan: qwen3:14b, gemma3:12b, qwen2.5-coder:14b fully on the GPU.
+(A PC with two cards, ~32 GB of GPU memory, would get `desktop-32gb` with 27-32B models.)
 
 That PC gets its **own** assistant: its own name, voice, memory - and its own phone and Telegram bot.
 Nothing personal is copied from the laptop (no memories, no keys, no paired phone).
@@ -30,9 +30,8 @@ What happens, in order:
 2. **Driver**: RTX 50-series needs NVIDIA driver 572+. If older, it opens NVIDIA's page; install, run again.
 3. **Installs** into `D:\NEKO`: Python (via uv, no admin), Neko's packages, GPU speech, Ollama portable
    (no startup entry), voices, Whisper `large-v3-turbo`, and the AI models:
-   - 32 GB of GPU memory + 85 GB free disk: **full** (qwen3:32b, qwen3:14b, qwen3:4b, qwen2.5-coder:32b,
-     gemma3:27b, bge-m3 - about 75 GB, a few hours on a normal connection)
-   - less disk: **light** (qwen3:32b, qwen3:4b, bge-m3 - about 28 GB). Force it with `-Models light`.
+   - 16 GB GPU: **full** (qwen3:14b, qwen3:4b, qwen2.5-coder:14b, gemma3:12b, bge-m3 - about 35 GB);
+     `-Models light` for qwen3:14b, qwen3:4b, bge-m3 (about 18 GB).
 4. **Profile questions** (answer for the person who will use THAT PC):
    - their name, the assistant's name (her wake word follows it - e.g. "Nova"), female or male voice,
      Bangla or not;
@@ -53,7 +52,7 @@ account can talk to her. Then set an **approval PIN**: Command Center > Phone > 
 - **Live calls from its phone**: install Tailscale on the office PC and on that phone (same Tailscale
   account), then Command Center > Phone > **Turn on calls** > Send call link to my phone.
 - **Let the laptop use the office GPU**: see docs/UPDATES.md (`scripts\share-gpu.ps1` on the office PC).
-  The laptop then automatically uses the office's biggest model (qwen3:32b) when the office PC is on.
+  The laptop then automatically uses the office's best model (qwen3:14b) when the office PC is on.
 
 ## Updates
 Office Neko checks every 6 hours. Tray icon > **Install update** when she says one is ready (backup,

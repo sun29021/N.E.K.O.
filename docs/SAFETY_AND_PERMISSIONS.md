@@ -44,6 +44,11 @@ PIN (PBKDF2-hashed, message deleted, 5 failures lock it for an hour). Typed text
 approve. Requests from the PC are never sent to the phone. Learned skills replay every step through the
 policy again, so a skill can never skip an approval.
 
+**Self-upgrades (0.9):** a change to N.E.K.O.'s own code needs approval (Claude Code with edits = Level 2),
+runs inside a checkpoint and is kept only if the full self-test passes, otherwise it is reverted exactly.
+Publishing to other PCs is Level 3 and refused unless the GitHub repo is confirmed private. Learned facts
+from files/links are stored as *observed*, scanned for injection wording and never executed.
+
 ## 5. Prompt-injection defence
 - Untrusted content is wrapped in `BEGIN UNTRUSTED <random tag> … END UNTRUSTED <tag>`. Look-alike
   markers inside the content are neutralised, and the system prompt tells the model it is data.

@@ -153,4 +153,7 @@ def build(settings: Settings | None = None, *, db_path: str | None = None, conso
     from ..routines import attach_routines
 
     neko.routines = attach_routines(neko)  # reminders + learned skills (the UI starts the reminder clock)
+    from .. import selfupdate
+
+    selfupdate.attach(neko)  # "restart yourself", "undo the last upgrade", "publish the update" (with approval)
     return neko

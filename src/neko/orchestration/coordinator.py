@@ -136,6 +136,9 @@ class Coordinator:
         # (request, reply) callbacks after every reply (e.g. "want me to save that as a skill?").
         self.extensions: list[Callable[[str, str, Any, CancelToken], tuple[str, str] | None]] = []
         self.after_reply: list[Callable[[str, Reply], None]] = []
+        # checkpoint -> change -> self-test -> keep or undo (selfupdate.upgrade_transaction); tests replace it so
+        # they never run Git against N.E.K.O.'s real folder
+        self.upgrade_transaction: Callable[..., tuple[str, str]] | None = None
 
     # ------------------------------------------------------------------ helpers
     def _state(self, state: AssistantState, detail: str = "") -> None:
@@ -556,20 +559,47 @@ class Coordinator:
                   "strictly: never weaken src/neko/security/*, keep the tool verifier rule, no shell strings, no "
                   "silent downloads/installs/startup entries, untrusted content stays fenced. Add or update unit "
                   "tests, run `.venv\\Scripts\\python -m unittest discover -s tests -t .` until it passes, and note "
-                  "the change in CHANGELOG.md and docs/STATUS.md. If the request is unsafe or impossible, change "
+                  "the change in CHANGELOG.md and docs/STATUS.md. Do not commit, push or publish - N.E.K.O. saves a checkpoint "
+                  "itself after re-running the tests. If the request is unsafe or impossible, change "
                   "nothing and explain why. Finish with a 2-3 sentence plain-language summary for a beginner, "
                   "and say that N.E.K.O. must be restarted to use the change.")
         self._state(AssistantState.TOOL, "upgrading myself with Claude Code")
         self.bus.publish(ev.TASK, id=task.id, goal=text[:120], kind="coding", status="running")
         ctx = ToolContext(token=token, paths=self.paths, task_id=task.id, settings=self.s, tainted=False)
-        res = self.executor.run("ask_claude_code", {"task": prompt, "folder": root, "allow_edits": True}, ctx)
-        self.tasks.add_step(task, f"ask_claude_code (self-upgrade): {res.summary}", "done" if res.ok else "failed")
+        from .. import selfupdate
+
+        done: dict[str, Any] = {}
+
+        def change() -> None:
+            done["res"] = self.executor.run("ask_claude_code", {"task": prompt, "folder": root, "allow_edits": True},
+                                            ctx)
+
+        # checkpoint -> change -> full self-test -> keep it as a commit, or put everything back
+        try:
+            status, detail = (self.upgrade_transaction or selfupdate.upgrade_transaction)(text, change, Path(root))
+        except NekoError as exc:
+            reply.text, reply.emotion, reply.succeeded = f"I couldn't upgrade myself: {exc}", "sad", False
+            return reply
+        res = done["res"]
+        self.tasks.add_step(task, f"ask_claude_code (self-upgrade): {res.summary} -> {status}",
+                            "done" if status == "kept" else "failed")
         if not res.ok:
             reply.text, reply.emotion, reply.succeeded = (f"I couldn't upgrade myself: {res.summary}", "sad", False)
             return reply
         answer = str((res.data or {}).get("answer", ""))
-        reply.text, reply.model, reply.location, reply.emotion = answer, "claude-code", "cloud:anthropic", "excited"
-        reply.speech = _speakable_summary(answer, more="Restart me with the desktop icon to use it.")
+        if status == "undone":
+            reply.text, reply.emotion, reply.succeeded = (
+                f"I tried, but my self-test failed afterwards ({detail}), so I undid the change - I'm exactly "
+                f"as before.\n\nWhat Claude Code said:\n{answer}"), "sad", False
+            reply.speech = "I tried, but my self-test failed, so I undid the change. I'm exactly as before."
+            return reply
+        if status == "unchanged":
+            reply.text, reply.emotion = f"Nothing in my code changed.\n\n{answer}", "calm"
+            return reply
+        reply.text, reply.model, reply.location, reply.emotion = (
+            f"{answer}\n\nSelf-test passed and I saved it as a checkpoint ({detail}). Say \"restart yourself\" to "
+            "use it, or \"undo the last upgrade\" to go back.", "claude-code", "cloud:anthropic", "excited")
+        reply.speech = _speakable_summary(answer, more="Tests passed. Say restart yourself to use it.")
         self._remember_project(root, text, _speakable_summary(answer, 300), True)
         return reply
 

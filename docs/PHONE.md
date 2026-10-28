@@ -12,6 +12,8 @@ PC: the phone is only a remote control and a microphone/speaker.
 - **Control the PC**: "lock my PC", "play Believer on the PC", "open Spotify", "what's the battery?",
   "send me my screen" (asks first), `/status`.
 - **Reminders**: "remind me at 6 to call Ammu". When it's due she says it on the PC *and* messages you.
+- **Upgrade and teach her**: "upgrade yourself so you can ...", "restart yourself", "undo the last upgrade",
+  "publish the update" (PIN), and "learn this" with text, a link or a file captioned "learn this".
 - **Alerts**: a long job on the PC (study notes, Claude Code) finished; the PC battery is low.
 - **Live calls**: `/call` sends you a private link. Open it, tap **Call** and just talk. She answers
   sentence by sentence with live subtitles; talk over her to interrupt. Bluetooth earbuds and Ray-Ban Meta

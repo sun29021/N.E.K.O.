@@ -180,6 +180,11 @@ class Controller:
         from .phone_tab import PhoneTab
 
         self.phone = PhoneService(self.neko, voice=lambda: self.voice, capture=self.bridge.capture_blocking)
+        from .. import selfupdate
+        from .updates import restart_neko
+
+        selfupdate.restarter = restart_neko
+        selfupdate.before_restart.append(self.phone.remember_restart)  # "I'm back" on the phone afterwards
         self.calls = CallServer(self.neko, self.phone, voice=lambda: self.voice)
         on_pc = self.bridge._on_approval_needed
 

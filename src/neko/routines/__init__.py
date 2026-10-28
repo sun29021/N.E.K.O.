@@ -325,6 +325,9 @@ def attach_routines(neko: Any) -> Routines:
     r = Routines(db=neko.db, bus=neko.bus, executor=neko.executor, paths=neko.paths, settings=neko.settings)
     neko.coordinator.extensions.append(r.handle)
     neko.coordinator.after_reply.append(r.after_reply)
+    from .learning import Learner
+
+    neko.coordinator.extensions.append(Learner(neko).handle)  # "learn this ..." -> facts in memory
     return r
 
 

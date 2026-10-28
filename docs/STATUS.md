@@ -238,6 +238,12 @@ with your keys (RAM question via tool 1.2 s; your exact Hisab sentence summarise
   Autoplay on song end is wired to the Qt player's EndOfMedia; not yet heard end-to-end on the real PC.
 
 
+## 6t. 0.9.0 - phone upgrades + learn this
+- Verified 2026-10-28: 280 tests OK (self-upgrade keep/undo/blocked-on-unsaved, undo twice, publish refuses non-private
+  and is Level 3, learn text/file, injections + secrets dropped, file outside allowed folders refused).
+- Not yet run live: a real Claude Code self-upgrade through the checkpoint, `learn this` with the real models.
+
+
 ## 7. PC crashes on 2026-10-27 (investigated read-only)
 | Time | Bug check | Meaning |
 |---|---|---|

@@ -66,6 +66,7 @@ class PhoneState:
     call_key: str = ""
     conversation_id: str = ""
     offset: int = 0
+    announce_back: bool = False   # restarted on request: say "I'm back" when connected again
 
     @classmethod
     def load(cls, path: Path) -> PhoneState:
@@ -142,6 +143,11 @@ class PhoneService:
         self._pair_until = time.time() + PAIR_MINUTES * 60
         return self._pair_code
 
+    def remember_restart(self) -> None:
+        if self.paired:
+            self.state.announce_back = True
+            self._save()
+
     def unpair(self) -> None:
         self.state.owner_chat_id, self.state.owner_name = 0, ""
         self._save()
@@ -192,6 +198,12 @@ class PhoneService:
         for t in self._threads:
             t.start()
         self.status = "connected" if self.paired else "waiting for pairing"
+        if self.paired and self.state.announce_back:
+            from .. import __version__
+
+            self.state.announce_back = False
+            self._save()
+            self.notify(f"I'm back! Running version {__version__}.")
         if not self.paired:
             # first start (e.g. right after installing on a new PC): show the pairing code by itself
             code = self.begin_pairing()
