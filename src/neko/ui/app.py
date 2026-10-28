@@ -135,6 +135,11 @@ class Controller:
         self._init_voice()
         self._wire()
         self._tray()
+        from .updates import Updater
+
+        self.updater = Updater()
+        self.updater.available.connect(self._on_update_available)
+        self.updater.finished.connect(self._on_update_finished)
         self._timers()
 
     # ------------------------------------------------------------------ setup
@@ -255,7 +260,8 @@ class Controller:
         self.tray.setToolTip(f"{APP_NAME} - local AI assistant")
         menu = QMenu()
         for text, fn in (("Show HUD", self.show_hud), ("Command Center", self.show_cc), ("Neko's brain", self.show_brain),
-                         ("Tool armory", self.show_armory),
+                         ("Tool armory", self.show_armory), ("Check for updates", lambda: self.updater.check()),
+                         ("Install update", self.install_update),
                          ("Stop current task", self.stop), ("Pause / resume music", self._toggle_music),
                          ("Stop music", lambda: self.music.control("stop")),
                          ("EMERGENCY STOP", self.emergency), ("Quit", self.quit)):
@@ -495,6 +501,26 @@ class Controller:
     def show_hud(self) -> None:
         self.hud.show()
         self.hud.raise_()
+
+    def _on_update_available(self, whats_new: str) -> None:
+        self.hud.setText("An update for me is ready - tray icon > Install update.")
+        if hasattr(self, "tray"):
+            self.tray.showMessage("N.E.K.O. update", whats_new[:240] or "A new version is ready.")
+
+    def install_update(self) -> None:
+        self.hud.setText("Updating myself... (backup, new version, self-test)")
+        self.updater.install()
+
+    def _on_update_finished(self, ok: bool, detail: str) -> None:
+        if ok:
+            self.hud.setText("Updated! Restarting...")
+            from .updates import restart_neko
+
+            QTimer.singleShot(1500, restart_neko)
+        else:
+            self.hud.setText("The update didn't work, so I stayed on my current version.")
+            if hasattr(self, "tray"):
+                self.tray.showMessage("N.E.K.O. update failed", detail[-240:])
 
     def show_brain(self) -> None:
         from .brain_view import BrainWindow

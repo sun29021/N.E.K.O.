@@ -21,6 +21,10 @@ foreach ($item in @("src", "tests", "scripts", "docs", "packaging", "pyproject.t
     } elseif (Test-Path $from) { Copy-Item $from "$Setup\neko\$item" }
 }
 Copy-Item "$Root\scripts\install\install.ps1" "$Setup\install.ps1"
+$origin = (git -C $Root remote get-url origin 2>$null)
+if ($origin) {  # tells the installer where updates come from (no credentials are stored here)
+    [IO.File]::WriteAllText("$Setup\neko-update.json", (@{ repo = $origin.Trim() } | ConvertTo-Json), (New-Object Text.UTF8Encoding $false))
+}
 $cmd = "@echo off`r`necho Installing N.E.K.O. - keep this window open.`r`npowershell -NoProfile -ExecutionPolicy Bypass -File `"%~dp0install.ps1`"`r`npause`r`n"
 [IO.File]::WriteAllText("$Setup\INSTALL.cmd", $cmd, (New-Object Text.ASCIIEncoding))
 $readme = @"

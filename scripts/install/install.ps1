@@ -37,7 +37,9 @@ param(
     [ValidateSet("", "female", "male")][string]$Voice = "",
     [switch]$NoShortcuts,
     [switch]$NoStart,
-    [string]$ProfileDir = ""
+    [string]$ProfileDir = "",
+    # where updates come from (your private GitHub repo); read from neko-update.json in the package if not given
+    [string]$Repo = ""
 )
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"   # much faster downloads in Windows PowerShell 5.1
@@ -143,6 +145,27 @@ New-Item -ItemType Directory -Force $InstallDir | Out-Null
 $App = Join-Path $InstallDir "app"
 robocopy $Package $App /E /NFL /NDL /NJH /NJS /NP /XD .venv __pycache__ .pytest_cache | Out-Null
 Say "    app files in $App"
+
+# connect this copy to the update repo, so "Install update" works later
+if (-not $Repo -and (Test-Path "$Here\neko-update.json")) { $Repo = (Get-Content "$Here\neko-update.json" -Raw | ConvertFrom-Json).repo }
+if ($Repo) {
+    $gitExe = (Get-Command git -ErrorAction SilentlyContinue).Source
+    if (-not $gitExe -and $haveWinget -and (Ask "  Install Git (needed for one-click updates)?")) {
+        winget install --id Git.Git -e --source winget --accept-package-agreements --accept-source-agreements
+        $gitExe = @("C:\Program Files\Git\cmd\git.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
+    }
+    if ($gitExe) {
+        Say "    connecting to the update repo (if a GitHub sign-in window opens, sign in)..."
+        Push-Location $App
+        if (-not (Test-Path .git)) { & $gitExe init -q -b main }
+        & $gitExe remote remove origin 2>$null
+        & $gitExe remote add origin $Repo
+        & $gitExe fetch -q origin main
+        if ($LASTEXITCODE -eq 0) { & $gitExe reset -q --hard origin/main; Say "    connected - updates will come from $Repo" }
+        else { Say "    couldn't reach the update repo now; Neko still works. Run the installer again later to connect." Yellow }
+        Pop-Location
+    } else { Say "    Git missing - one-click updates are off (Neko itself works)." Yellow }
+}
 
 Step 3 "Python (via uv, no admin)"
 if (-not $uvExe) {
