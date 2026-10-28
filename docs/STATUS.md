@@ -258,6 +258,10 @@ with your keys (RAM question via tool 1.2 s; your exact Hisab sentence summarise
 - docs/guides: 3 PDFs (9 + 15 + 10 pages), every page checked as an image.
 
 
+## 6w. 0.10.2 - one-drive office PC
+- Programs folder falls back to C:\PROJECT without a D: drive (tested); guides rebuilt. 304 tests OK.
+
+
 ## 7. PC crashes on 2026-10-27 (investigated read-only)
 | Time | Bug check | Meaning |
 |---|---|---|

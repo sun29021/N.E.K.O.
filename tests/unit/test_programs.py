@@ -79,6 +79,16 @@ class ProgramTests(unittest.TestCase):
         time.sleep(0.5)
         self.assertNotIn("Waiter", [k for k, p in programs._running.items() if p.poll() is None])
 
+    def test_default_folder_on_a_one_drive_pc(self):
+        from types import SimpleNamespace as N
+        from unittest import mock
+
+        no_setting = N(tools=N(programs_root=""))
+        with mock.patch.object(programs.Path, "exists", lambda self: str(self) != "D:\\"):
+            self.assertEqual(str(programs.projects_root(no_setting)), "C:\\PROJECT")
+        with mock.patch.object(programs.Path, "exists", lambda self: True):
+            self.assertEqual(str(programs.projects_root(no_setting)), "D:\\PROJECT")
+
     def test_npm_url_guess(self):
         web = [c for c in programs.candidates(self.n.settings) if c["kind"] == "npm"][0]
         self.assertEqual((web["script"], web["url"]), ("web", "http://localhost:5999"))

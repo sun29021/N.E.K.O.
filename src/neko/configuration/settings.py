@@ -154,7 +154,7 @@ class ToolsSection:
     cloud_documents: bool = False      # let Claude Code read your documents for study notes (sends them to Anthropic)
     study_folder: str = ""            # where study notes/cheat sheets go ("" = first writable folder\\Study)
     allowed_apps: dict[str, str] = field(default_factory=dict)
-    programs_root: str = ""            # your own programs live here ("" = D:\PROJECT); see programs.py
+    programs_root: str = ""            # your own programs ("" = D:\PROJECT, or C:\PROJECT with one drive)
 
 
 @dataclass

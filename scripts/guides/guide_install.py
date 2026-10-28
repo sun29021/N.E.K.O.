@@ -6,7 +6,11 @@ FOOT = "N.E.K.O. - Installation guide"
 # (Python 3.11: no backslashes inside {...} of f-strings, so anything with a Windows path lives here)
 CMD_BUILD = '<div class="cmdbox">powershell -ExecutionPolicy Bypass -File D:\\PROJECT\\N.E.K.O\\scripts\\build-dist.ps1</div>'
 ZIP = "<code>D:\\NEKO-Data\\dist\\NEKO-Setup.zip</code>"
-CMD_GPU = '<div class="cmdbox">powershell -ExecutionPolicy Bypass -File D:\\NEKO\\app\\scripts\\share-gpu.ps1</div>'
+CMD_GPU = '<div class="cmdbox">powershell -ExecutionPolicy Bypass -File $HOME\\NEKO\\app\\scripts\\share-gpu.ps1</div>'
+GPU_D = "<code>D:\\NEKO\\app\\scripts\\share-gpu.ps1</code>"
+HOME_NEKO = "<code>C:\\Users\\&lt;your name&gt;\\NEKO</code>"
+D_NEKO = "<code>D:\\NEKO</code>"
+PROJECT_C = "<code>C:\\PROJECT</code>"
 LIGHT = "<code>.\\install.ps1 -Models light</code>"
 
 
@@ -47,7 +51,8 @@ set reminders and much more.</p>
         [icon("desktop", size="7mm"), "<b>A Windows 10 or 11 computer</b>", "The computer Neko will live on."],
         [icon("gear", size="7mm"), "<b>An NVIDIA graphics card</b> (6 GB or more is best)",
          "The AI runs on it. The office PC's RTX 5060 Ti 16 GB is perfect. Without one she still works, slower."],
-        [icon("download", size="7mm"), "<b>About 60 GB of free disk space</b>", "Most of it is the AI's &quot;brain&quot; files."],
+        [icon("download", size="7mm"), "<b>About 60 GB of free disk space</b>", "Most of it is the AI's &quot;brain&quot; files. "
+         "One drive is fine: a PC with only C: (like a 512 GB SSD) works."],
         [icon("cloud", size="7mm"), "<b>Internet during the install</b>", "To download the AI. Afterwards she also works offline."],
         [icon("phone", size="7mm"), "<b>A phone with Telegram</b> (optional)", "To chat with her and approve things from anywhere."],
         [icon("link", size="7mm"), "<b>Tailscale</b> (optional, free)", "A private connection between your computers and phones."],
@@ -103,11 +108,11 @@ Windows            Microsoft Windows 11 Pro (build 26100)          <span class="
 CPU                AMD Ryzen 7 7800X3D                             <span class="g">ok</span>
 Memory             32 GB                                           <span class="g">ok</span>
 Graphics           NVIDIA GeForce RTX 5060 Ti, 16 GB               <span class="g">ok - GPU AI</span>
-Free disk (D:)     412 GB                                          <span class="g">ok</span>
+Free disk (C:)     389 GB                                          <span class="g">ok</span>
 Internet           reachable                                       <span class="g">ok</span>
 
 Plan: profile desktop-16gb, speech 'large-v3-turbo' on cuda, models: qwen3:14b, ...
-<span class="y">Install N.E.K.O. into D:\\NEKO now? (downloads roughly 35 GB) [Y/n]</span> _</div>"""
+<span class="y">Install N.E.K.O. into C:\\Users\\Rafi\\NEKO now? (downloads roughly 35 GB) [Y/n]</span> _</div>"""
     add(f"""
 <div class="kicker">Part B &middot; on the new computer</div>
 <h1>Install with one double-click</h1>
@@ -119,6 +124,8 @@ Plan: profile desktop-16gb, speech 'large-v3-turbo' on cuda, models: qwen3:14b, 
       "<p>It now installs Python, Neko, her voice, her hearing, and the AI models sized for this graphics card. "
       "On a normal home connection this takes <b>1-3 hours</b>. You can leave the computer alone - it continues by itself. "
       "If it stops (for example the internet drops), just double-click INSTALL.cmd again: it continues where it stopped.</p>", "b")}
+{note("info", "Where does she go?", "On a PC with only one drive (C:) Neko is installed in " + HOME_NEKO + "; on a PC with a D: "
+      "drive in " + D_NEKO + ". The installer picks it by itself and checks there is enough space.")}
 {note("safe", "Old graphics driver?", "RTX 50-series cards need NVIDIA driver 572 or newer. If yours is older, the installer "
       "offers to open NVIDIA's download page. Install the driver, restart, and run INSTALL.cmd again.")}
 """)
@@ -192,6 +199,7 @@ makes a private, encrypted network just for your own devices.</p>
       "your phones. Sign in with the <b>same account</b> on all of them.</p>", "c")}
 {step("C2", "Let the laptop use the office PC's AI power", "<p>On the office PC, in PowerShell:</p>"
       + CMD_GPU +
+      "<p class='small'>(If that PC has a D: drive, the file is " + GPU_D + " instead.)</p>"
       "<p>Now, whenever the office PC is on, the laptop automatically thinks with the office PC's bigger AI.</p>", "c")}
 {step("C3", "Link the two Nekos", "<p>On the office PC: Command Center &rarr; Phone &rarr; <b>Let my other PC connect</b> "
       "and copy the code. On the laptop: Command Center &rarr; Phone &rarr; <b>Connect to my other PC</b> and paste it. Then "
@@ -225,7 +233,7 @@ fails. Her memory, phones and keys are never touched.</p>
         ["Call page says 'Can't reach Neko'", "The PC is off/asleep, or Tailscale isn't connected on the phone."],
     ], ["40%", "60%"])}
 <h2>Removing Neko</h2>
-<p>Delete the folder <code>D:\\NEKO</code>, the folder <code>%LOCALAPPDATA%\\NEKO</code> (her memory) and the Desktop
+<p>Delete the <b>NEKO</b> folder (<code>C:\\Users\\&lt;you&gt;\\NEKO</code>, or <code>D:\\NEKO</code>), the folder <code>%LOCALAPPDATA%\\NEKO</code> (her memory) and the Desktop
 shortcut. In @BotFather you can send <code>/deletebot</code> to remove the phone bot too.</p>
 """)
     return document("Installing N.E.K.O.", p)

@@ -3,6 +3,15 @@
 All notable changes. Versions follow semantic versioning; database schema and
 config versions are tracked separately (see docs/DATABASE_SCHEMA.md).
 
+## [0.10.2] - 2026-10-28 - PCs with only one drive
+
+### Fixed
+- Your-programs folder: `D:\PROJECT`, or `C:\PROJECT` on a PC with only C: (the office PC: one 512 GB SSD). An empty
+  list now says where to put programs.
+- Guides and office notes no longer assume a D: drive (install folder `C:\Users\<name>\NEKO`, GPU-sharing command
+  uses `$HOME`).
+
+
 ## [0.10.1] - 2026-10-28 - printable guides, owner-only approvals
 
 ### Added

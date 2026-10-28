@@ -1,6 +1,8 @@
 # Installing N.E.K.O. on another PC (e.g. the office desktop)
 
-Office PC: MSI with **one RTX 5060 Ti 16 GB**, Ryzen 7 7800X3D, 32 GB DDR5 RAM. The installer detects this
+Office PC: MSI with **one RTX 5060 Ti 16 GB**, Ryzen 7 7800X3D, 32 GB DDR5 RAM, **one 512 GB SSD (C: only)**.
+With no D: drive Neko installs into `C:\Users\<name>\NEKO` (about 45 GB with the full model set), and your own
+programs go into `C:\PROJECT` (one folder each). The installer detects this
 itself and picks the `desktop-16gb` plan: qwen3:14b, gemma3:12b, qwen2.5-coder:14b fully on the GPU.
 (A PC with two cards, ~32 GB of GPU memory, would get `desktop-32gb` with 27-32B models.)
 
@@ -28,7 +30,7 @@ What happens, in order:
 1. **Check**: Windows, CPU, RAM, every NVIDIA GPU + total video memory, driver, free disk, internet.
    (Only want the check? `install.ps1 -CheckOnly`.)
 2. **Driver**: RTX 50-series needs NVIDIA driver 572+. If older, it opens NVIDIA's page; install, run again.
-3. **Installs** into `D:\NEKO`: Python (via uv, no admin), Neko's packages, GPU speech, Ollama portable
+3. **Installs** into `C:\Users\<name>\NEKO` on this one-drive PC (`D:\NEKO` where a D: drive exists): Python (via uv, no admin), Neko's packages, GPU speech, Ollama portable
    (no startup entry), voices, Whisper `large-v3-turbo`, and the AI models:
    - 16 GB GPU: **full** (qwen3:14b, qwen3:4b, qwen2.5-coder:14b, gemma3:12b, bge-m3 - about 35 GB);
      `-Models light` for qwen3:14b, qwen3:4b, bge-m3 (about 18 GB).
@@ -62,7 +64,7 @@ On the laptop: Command Center > Phone > **Connect to my other PC** - paste it. T
 ## 5. Optional extras on the office PC
 - **Live calls from its phone**: install Tailscale on the office PC and on that phone (same Tailscale
   account), then Command Center > Phone > **Turn on calls** > Send call link to my phone.
-- **Let the laptop use the office GPU**: see docs/UPDATES.md (`scripts\share-gpu.ps1` on the office PC).
+- **Let the laptop use the office GPU**: see docs/UPDATES.md (on the office PC in PowerShell: `powershell -ExecutionPolicy Bypass -File $HOME\NEKO\app\scripts\share-gpu.ps1`).
   The laptop then automatically uses the office's best model (qwen3:14b) when the office PC is on.
 
 ## Updates
@@ -73,4 +75,4 @@ are never touched by updates.
 ## Notes
 - Re-running the installer is safe: finished steps are skipped; the profile and keys are kept unless you
   choose to replace them.
-- Uninstall: delete `D:\NEKO`, `%LOCALAPPDATA%\NEKO` and the shortcuts; in @BotFather send `/deletebot`.
+- Uninstall: delete the NEKO folder (`C:\Users\<name>\NEKO`), `%LOCALAPPDATA%\NEKO` and the shortcuts; in @BotFather send `/deletebot`.

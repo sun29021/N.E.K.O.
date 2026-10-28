@@ -66,7 +66,11 @@ def _score(a: str, b: str) -> float:
 
 # ---------------------------------------------------------------------- finding programs
 def projects_root(settings: Any) -> Path:
-    return Path(os.path.expandvars(getattr(getattr(settings, "tools", None), "programs_root", "") or DEFAULT_ROOT))
+    """tools.programs_root, else D:\\PROJECT - or C:\\PROJECT on a PC with only one drive."""
+    chosen = getattr(getattr(settings, "tools", None), "programs_root", "")
+    if chosen:
+        return Path(os.path.expandvars(chosen))
+    return Path(DEFAULT_ROOT) if Path("D:\\").exists() else Path("C:\\PROJECT")
 
 
 def _entry_files(project: Path, depth: int = 4) -> list[Path]:
@@ -403,9 +407,12 @@ def attach(neko: Any) -> Programs:
             found = [c for c in candidates(neko.settings) if c["name"] not in mine]
             lines = [f"- {n} ({e['kind']})" for n, e in mine.items()]
             more = [f"- {c['name']} ({c['kind']}: {Path(c['path']).name})" for c in found]
+            where = projects_root(neko.settings)
+            empty = "" if lines or more else (f"\n\nPut each of your programs in its own folder inside {where} and "
+                                              "ask me again.")
             return ((("Programs I can run:\n" + "\n".join(lines)) if lines else "I haven't learned any of your "
                      "programs yet.") + (("\n\nFound in your projects (say \"learn to use <name>\"):\n"
-                                          + "\n".join(more)) if more else "")), "neutral"
+                                          + "\n".join(more)) if more else "") + empty), "neutral"
         if (m := _LEARN.match(t)):
             want = m.group("name").strip('"')
             path = Path(want)

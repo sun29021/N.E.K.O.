@@ -125,7 +125,8 @@ example <b>Nova</b>). In this guide we write <b>Neko</b>; just use her real name
 <h1>Your work programs, by voice</h1>
 <p class="lead">The owner can teach Neko the shop's programs (for example the billing software). Then you can just ask:</p>
 <p>{say("which programs can you run?")} {say("open Print SOFT")} {say("stop Print SOFT")}</p>
-<p class="small">Some programs ask the owner for approval each time; others the owner has marked as always allowed.</p>
+<p class="small">Some programs ask the owner for approval each time; others the owner has marked as always allowed. On this PC the
+programs she may run live in the folder <b>C:\PROJECT</b> - one folder per program.</p>
 <h2>Saved skills - many clicks in one sentence</h2>
 {step("1", "Show her once", "<p>Ask her to do the steps one by one, for example:</p>" + say("open Print SOFT") +
       say("in Print SOFT click New bill") + say("click Today"))}
