@@ -239,8 +239,10 @@ _PC_RULES: list[tuple[re.Pattern[str], str, dict[str, Any]]] = [
      "pc_control", {"action": "sleep"}),
     (re.compile(_LEAD + r"lock\s+(?:my |the |this )?(?:pc|computer|laptop|screen)\b", re.I), "pc_control",
      {"action": "lock"}),
-    (re.compile(_LEAD + r"(?:un)?mute(?:\s+(?:the |my )?(?:pc|sound|volume|audio|computer))?\W*$", re.I),
-     "pc_control", {"action": "mute"}),
+    (re.compile(_LEAD + r"(?:unmute(?:\s+(?:the |my )?(?:pc|sound|volume|audio|computer|speakers?))?|turn\s+(?:the\s+|my\s+)?"
+                r"(?:sound|audio|speakers?)\s+(?:back\s+)?on|sound\s+on)\W*$", re.I), "pc_control", {"action": "unmute"}),
+    (re.compile(_LEAD + r"(?:mute(?:\s+(?:the |my )?(?:pc|sound|volume|audio|computer|speakers?))?|turn\s+(?:the\s+|my\s+)?"
+                r"(?:sound|audio|speakers?)\s+off|sound\s+off)\W*$", re.I), "pc_control", {"action": "mute"}),
     (re.compile(_LEAD + r"(?:turn\s+(?:the\s+)?volume\s+up|volume\s+up|increase\s+(?:the\s+)?volume|"
                 r"turn\s+(?:it\s+)?up(?:\s+the\s+volume)?|make\s+it\s+louder)\b", re.I), "pc_control",
      {"action": "volume_up"}),

@@ -114,6 +114,18 @@ class RoutingTests(unittest.TestCase):
         self.assertEqual(n.coordinator.handle("stop the music").text, "Music off.")
         self.assertEqual(p.requests, [])  # none of this needed the language model
 
+    def test_muted_pc_is_unmuted_for_music(self):
+        old = media.prepare_sound
+        self.addCleanup(setattr, media, "prepare_sound", old)
+        media.prepare_sound = lambda: "unmuted your PC's sound and turned the volume up to 25%"
+        n = build_test_neko(temp_dir(), FakeProvider(), privacy={"allow_network": True})
+        self.addCleanup(n.shutdown)
+        r = n.coordinator.handle("play Believer")
+        self.assertIn("Playing Believer", r.text)
+        self.assertIn("Your sound was off, so I unmuted", r.text)
+
+    def test_tests_never_touch_the_real_speakers(self):
+        self.assertIsNone(media.prepare_sound)  # only the desktop app plugs it in
     def test_volume_words_are_chat_when_nothing_plays(self):
         p = FakeProvider(responses=["Sure, I'll speak up!"])
         n = build_test_neko(temp_dir(), p, privacy={"allow_network": True})

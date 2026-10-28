@@ -3,6 +3,19 @@
 All notable changes. Versions follow semantic versioning; database schema and
 config versions are tracked separately (see docs/DATABASE_SCHEMA.md).
 
+## [0.8.2] - 2026-10-28 - music you can actually hear
+
+### Fixed
+- "Play <song>" (seen from the phone) played on a PC that was muted at 0 % volume, so nothing was heard while
+  she said "Playing...". Before playing she now unmutes the speakers and raises a ~0 % volume to 25 %, and
+  says so. (Windows Core Audio through plain ctypes; plugged in by the desktop app only, never in tests.)
+- "Mute" and "unmute" were the same toggle key; now they really mute / unmute and verify the result.
+  New: "unmute", "turn the sound on", "sound off".
+- Round video messages from Telegram are listened to like voice notes (they were ignored).
+
+### Added
+- `/status` from the phone also reports whether the PC's sound is muted.
+
 ## [0.8.1] - 2026-10-28 - easy office install with its own phone
 
 ### Added

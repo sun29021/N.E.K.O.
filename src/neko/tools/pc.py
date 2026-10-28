@@ -191,8 +191,96 @@ def _press(vk: int, times: int = 1) -> None:
         time.sleep(0.02)
 
 
-PC_ACTIONS = ("volume_up", "volume_down", "mute", "play_pause", "next_track", "previous_track", "stop_media",
-              "lock", "sleep", "restart", "shutdown", "cancel_shutdown")
+# ---------------------------------------------------------------------- the speakers (Windows Core Audio, plain ctypes COM)
+class _GUID(ctypes.Structure):
+    _fields_ = [("a", ctypes.c_ulong), ("b", ctypes.c_ushort), ("c", ctypes.c_ushort), ("d", ctypes.c_ubyte * 8)]
+
+    def __init__(self, text: str) -> None:
+        super().__init__()
+        h = text.replace("-", "")
+        self.a, self.b, self.c = int(h[:8], 16), int(h[8:12], 16), int(h[12:16], 16)
+        for i in range(8):
+            self.d[i] = int(h[16 + 2 * i:18 + 2 * i], 16)
+
+
+def _call(obj: ctypes.c_void_p, index: int, *args: Any) -> int:
+    """Call method index of a COM object's vtable (HRESULT return)."""
+    vtbl = ctypes.cast(obj, ctypes.POINTER(ctypes.POINTER(ctypes.c_void_p))).contents
+    kinds = [ctypes.c_void_p if type(a).__name__ == "CArgObject" else type(a) for a in args]  # byref() -> pointer
+    fn = ctypes.WINFUNCTYPE(ctypes.c_long, ctypes.c_void_p, *kinds)(vtbl[index])
+    return int(fn(obj, *args))
+
+
+def _endpoint_volume() -> ctypes.c_void_p:
+    ole = ctypes.windll.ole32
+    ole.CoInitialize(None)  # (already initialised on this thread is fine)
+    enum = ctypes.c_void_p()
+    hr = ole.CoCreateInstance(ctypes.byref(_GUID("BCDE0395-E52F-467C-8E3D-C4579291692E")), None, 23,
+                              ctypes.byref(_GUID("A95664D2-9614-4F35-A746-DE8DB63617E6")), ctypes.byref(enum))
+    if hr != 0:
+        raise OSError(f"audio devices unavailable ({hr & 0xFFFFFFFF:#x})")
+    dev, vol = ctypes.c_void_p(), ctypes.c_void_p()
+    try:
+        # IMMDeviceEnumerator::GetDefaultAudioEndpoint(eRender, eMultimedia)
+        if _call(enum, 4, ctypes.c_int(0), ctypes.c_int(1), ctypes.byref(dev)) != 0:
+            raise OSError("no speakers found")
+        # IMMDevice::Activate(IID_IAudioEndpointVolume, CLSCTX_ALL)
+        if _call(dev, 3, ctypes.byref(_GUID("5CDF2C82-841E-4546-9722-0CF74078229A")), ctypes.c_ulong(23),
+                 ctypes.c_void_p(), ctypes.byref(vol)) != 0:
+            raise OSError("speaker volume unavailable")
+    finally:
+        for o in (dev, enum):
+            if o.value:
+                _call(o, 2)  # Release
+    return vol
+
+
+def speaker_state() -> tuple[bool, int] | None:
+    """(muted, volume %) of the default speakers, or None if it can't be read."""
+    try:
+        vol = _endpoint_volume()
+    except OSError:
+        return None
+    try:
+        muted, level = ctypes.c_int(0), ctypes.c_float(0)
+        _call(vol, 15, ctypes.byref(muted))       # GetMute
+        _call(vol, 9, ctypes.byref(level))        # GetMasterVolumeLevelScalar
+        return bool(muted.value), round(level.value * 100)
+    finally:
+        _call(vol, 2)
+
+
+def set_speakers(*, mute: bool | None = None, volume: int | None = None) -> bool:
+    try:
+        vol = _endpoint_volume()
+    except OSError:
+        return False
+    try:
+        if mute is not None:
+            _call(vol, 14, ctypes.c_int(int(mute)), ctypes.c_void_p())                    # SetMute
+        if volume is not None:
+            _call(vol, 7, ctypes.c_float(max(0, min(100, volume)) / 100), ctypes.c_void_p())  # SetMasterVolumeLevelScalar
+        return True
+    finally:
+        _call(vol, 2)
+
+
+def make_audible(min_volume: int = 25) -> str:
+    """Before music: unmute the speakers / raise a near-zero volume. Returns what was changed ("" = nothing)."""
+    st = speaker_state()
+    if st is None:
+        return ""
+    muted, level = st
+    done = []
+    if muted and set_speakers(mute=False):
+        done.append("unmuted your PC's sound")
+    if level < 5 and set_speakers(volume=min_volume):
+        done.append(f"turned the volume up to {min_volume}%")
+    return " and ".join(done)
+
+
+PC_ACTIONS = ("volume_up", "volume_down", "mute", "unmute", "play_pause", "next_track", "previous_track",
+              "stop_media", "lock", "sleep", "restart", "shutdown", "cancel_shutdown")
 
 
 def _pc_risk(args: dict[str, Any]) -> RiskLevel:
@@ -206,6 +294,10 @@ def _pc_risk(args: dict[str, Any]) -> RiskLevel:
 
 def _pc(args: dict[str, Any], ctx: ToolContext) -> ToolResult:
     a = args["action"]
+    if a in ("mute", "unmute") and set_speakers(mute=a == "mute"):
+        return ToolResult(True, "Muted the PC" if a == "mute" else "Unmuted the PC")
+    if a == "unmute":
+        raise ToolError("couldn't reach the speakers")
     if a in _VK:
         steps = max(1, min(25, int(args.get("steps", 5)))) if a in ("volume_up", "volume_down") else 1
         _press(_VK[a], steps)  # each step is 2 %
@@ -239,6 +331,8 @@ def _verify_pc(args: dict[str, Any], result: ToolResult, ctx: ToolContext) -> tu
         return True, "Windows accepted the shutdown request (30 s countdown)"
     if a == "lock":
         return True, "lock requested"  # the screen locks; nothing more can be read from here
+    if a in ("mute", "unmute") and (st := speaker_state()) is not None:
+        return st[0] == (a == "mute"), f"speakers {'muted' if st[0] else 'on'} at {st[1]}%"
     return True, "key sent"
 
 

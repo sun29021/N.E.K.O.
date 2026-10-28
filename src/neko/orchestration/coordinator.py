@@ -355,7 +355,8 @@ class Coordinator:
             title = (res.data or {}).get("title", song)
             if res.verified is False:
                 return f"I found \"{title}\" but it didn't start playing ({res.verification}).", "sad"
-            return f"Playing {title}.", "happy"
+            fixed = (res.data or {}).get("fixed_sound", "") if isinstance(res.data, dict) else ""
+            return f"Playing {title}." + (f" (Your sound was off, so I {fixed}.)" if fixed else ""), "happy"
         return {"pause": ("Paused.", "calm"), "resume": ("Okay, back on!", "happy"), "stop": ("Music off.", "calm"),
                 "louder": ("Louder!", "playful"), "quieter": ("A bit quieter.", "calm")}[action]
 

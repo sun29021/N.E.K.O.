@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import re
 import time
+from collections.abc import Callable
 from typing import Any, Protocol
 
 from ..core.errors import ToolError
@@ -29,6 +30,8 @@ class MusicPlayer(Protocol):
 
 
 player: MusicPlayer | None = None  # set by the desktop app
+# set by the desktop app too: unmutes / raises a ~0 % volume before playing, returns what it changed
+prepare_sound: Callable[[], str] | None = None
 
 MAX_SONG_SECONDS = 3 * 3600  # skip 10-hour loops and live streams
 
@@ -112,13 +115,15 @@ def _play(args: dict[str, Any], ctx: ToolContext) -> ToolResult:
         return ToolResult(False, "music needs the desktop app (run 'python -m neko ui')")
     songs = find_songs(args["query"])
     problem = ""
+    # seen live: the song played on a muted PC at 0 % volume and nobody heard it
+    fixed = prepare_sound() if prepare_sound is not None else ""
     for song in songs[:3]:  # seen live: a stream link occasionally fails ("Could not open file") - try the next
         ctx.token.raise_if_cancelled()
         player.play(song["url"], song["title"])
         started, problem = _wait_started()
         if started:
             return ToolResult(True, f"Playing {song['title']}",
-                              {k: song[k] for k in ("title", "page", "duration", "channel")})
+                              {**{k: song[k] for k in ("title", "page", "duration", "channel")}, "fixed_sound": fixed})
     return ToolResult(False, f"found songs but none would play ({problem})")
 
 def _verify_play(args: dict[str, Any], result: ToolResult, ctx: ToolContext) -> tuple[bool, str]:

@@ -228,6 +228,11 @@ with your keys (RAM question via tool 1.2 s; your exact Hisab sentence summarise
   pairing code shown on first start, separate PCs never share pairing/call key).
 - Not yet run on the real office PC.
 
+## 6r. 0.8.2 - muted PC
+- Live finding 2026-10-28: "Play casa casa" from the phone ran play_music (player verified playing) but the
+  PC was muted at 0 % (read with the new `speaker_state`). Fixed: music unmutes / raises volume first.
+  268 tests OK; the real speakers stayed untouched during the test run (checked before and after).
+
 ## 7. PC crashes on 2026-10-27 (investigated read-only)
 | Time | Bug check | Meaning |
 |---|---|---|

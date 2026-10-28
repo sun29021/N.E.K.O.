@@ -48,7 +48,7 @@ _STATUS = re.compile(r"\b(is my (pc|laptop|computer) (on|okay|ok|running|awake))
                      re.I)
 _SAVE_ONLY = re.compile(r"^\W*(save|keep|store)\b(?!.*\b(summar|explain|read|notes?|study|what)\b)", re.I)
 HELP = ("I'm Neko on your phone. Talk to me like on the PC:\n"
-        "- text or voice notes (I answer with a voice note when you send one)\n"
+        "- text, voice notes or round video messages (I answer with a voice note when you send one)\n"
         "- send a photo: \"what is this?\"; send a PDF or file: \"summarize this\", \"make study notes\"\n"
         "- \"remind me at 6 to call Ammu\", \"lock my PC\", \"play music on the PC\", \"send me my screen\"\n"
         "- /call - live voice call link (needs Tailscale on this phone)\n"
@@ -418,9 +418,10 @@ class PhoneService:
         images: list[bytes] | None = None
         spoken = False
         conv = self._conversation()
-        if msg.get("voice") or msg.get("audio"):
+        clip = msg.get("voice") or msg.get("audio") or msg.get("video_note")  # round videos are listened to as well
+        if clip:
             api.typing(chat, "record_voice")
-            heard = self._transcribe(api.download((msg.get("voice") or msg.get("audio"))["file_id"]))
+            heard = self._transcribe(api.download(clip["file_id"]))
             if not heard:
                 api.send_text(chat, "I couldn't make out any words in that voice note.")
                 return
@@ -508,7 +509,11 @@ class PhoneService:
             power = ("on battery" if snap.on_battery else "plugged in") if snap.on_battery is not None else ""
             batt = f", battery {snap.battery_pct}%" if snap.battery_pct is not None else ""
             cpu = f", CPU {snap.cpu_pct:.0f}%" if snap.cpu_pct is not None else ""
-            return f"Yes, I'm on and listening. PC: {power}{batt}{cpu}.".replace(": ,", ":"), "happy"
+            from ..tools.pc import speaker_state
+
+            spk = speaker_state()
+            sound = (", sound MUTED (say \"unmute\")" if spk[0] else f", sound {spk[1]}%") if spk else ""
+            return f"Yes, I'm on and listening. PC: {power}{batt}{cpu}{sound}.".replace(": ,", ":"), "happy"
         if _SCREEN.search(text) and len(text.split()) <= 12:
             ctx = ToolContext(token=token, paths=self.neko.paths, task_id=getattr(task, "id", None), settings=self.s)
             res = self.neko.executor.run("send_screen_to_phone", {}, ctx)

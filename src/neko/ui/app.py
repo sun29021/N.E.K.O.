@@ -122,6 +122,9 @@ class Controller:
 
         self.music = MusicPlayer(volume=s.ui.music_volume)
         media.player = self.music
+        from ..tools.pc import make_audible
+
+        media.prepare_sound = make_audible  # music you ask for should be heard (unmute / volume 0)
         self.music.now_playing.connect(lambda t: self.hud.setText(f"♪ {t}") if t else None)
         self.music.state_changed.connect(lambda st: setattr(self.hud, "music_state", st))
         self.voice: Any = None
